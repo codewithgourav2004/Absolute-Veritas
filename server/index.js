@@ -26,11 +26,12 @@ app.use(express.urlencoded({ extended: true }));
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: 'Too many requests' });
 app.use('/api', limiter);
 
-// Cache-Control helper — only caches successful GET responses (never errors)
+// Cache-Control helper — skips caching for admin (authenticated) requests
 const cachePublic = (maxAge) => (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = (body) => {
-    if (res.statusCode >= 200 && res.statusCode < 300 && req.method === 'GET') {
+    const isAdminReq = Boolean(req.headers.authorization);
+    if (res.statusCode >= 200 && res.statusCode < 300 && req.method === 'GET' && !isAdminReq) {
       res.set('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=60`);
     } else {
       res.set('Cache-Control', 'no-store');

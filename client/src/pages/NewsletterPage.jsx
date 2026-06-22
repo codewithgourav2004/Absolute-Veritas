@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from 'react-query';
 import api from '../utils/api';
 import Loader from '../components/Common/Loader';
+import FlipbookViewer from '../components/Newsletter/FlipbookViewer';
 
 const normalizeImg = (url) => {
   if (!url) return null;
@@ -21,25 +22,33 @@ const fmtDate = (month, year) => {
   return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-// ── Newsletter Card (Vincular-style) ─────────────────────────────────────────
-const NewsletterCard = ({ newsletter }) => {
+// ── Newsletter Card ───────────────────────────────────────────────────────────
+const NewsletterCard = ({ newsletter, onOpenFlipbook }) => {
   const hasImage = Boolean(newsletter.coverImage);
   const hasPdf   = Boolean(newsletter.pdfLink);
+
+  const handleClick = (e) => {
+    if (hasPdf) {
+      e.preventDefault();
+      onOpenFlipbook(newsletter);
+    }
+  };
 
   return (
     <Link
       to={`/newsletter/${newsletter._id}`}
-      className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
+      onClick={handleClick}
+      className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
     >
       {/* Cover image */}
-      <div className="relative overflow-hidden bg-indigo" style={{ aspectRatio: '4/3' }}>
+      <div className="relative h-52 w-full overflow-hidden bg-indigo flex-shrink-0">
         {hasImage ? (
           <img
             src={normalizeImg(newsletter.coverImage)}
             alt={newsletter.title}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
@@ -54,20 +63,21 @@ const NewsletterCard = ({ newsletter }) => {
           </div>
         )}
 
-        {/* PDF badge */}
+        {/* Flipbook hover overlay */}
         {hasPdf && (
-          <span className="absolute top-3 right-3 bg-crimson text-white text-[11px] font-black uppercase px-2 py-1 rounded-md shadow-lg flex items-center gap-1 tracking-wide">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            PDF
-          </span>
+          <div className="absolute inset-0 bg-indigo/0 group-hover:bg-indigo/60 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <span className="flex items-center gap-2 bg-crimson text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-xl">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Read Flipbook
+            </span>
+          </div>
         )}
       </div>
 
       {/* Card body */}
       <div className="p-5 flex flex-col flex-1">
-        {/* Date */}
         <div className="flex items-center gap-1.5 text-xs text-steel mb-2.5">
           <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -75,15 +85,13 @@ const NewsletterCard = ({ newsletter }) => {
           {fmtDate(newsletter.month, newsletter.year)}
         </div>
 
-        {/* Title */}
         <h3 className="font-bold text-indigo text-[15px] leading-snug mb-4 group-hover:text-crimson transition-colors duration-200 line-clamp-3">
           {newsletter.title}
         </h3>
 
-        {/* View link */}
         <div className="mt-auto">
           <span className="text-sm text-crimson font-semibold group-hover:underline inline-flex items-center gap-1">
-            View newsletter
+            {hasPdf ? 'Read Flipbook' : 'View newsletter'}
             <svg className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
@@ -212,6 +220,8 @@ const SubscribeSection = () => {
 
 // ── NewsletterPage ────────────────────────────────────────────────────────────
 const NewsletterPage = () => {
+  const [flipbook, setFlipbook] = useState(null);
+
   const { data: newsletters = [], isLoading } = useQuery(
     'newsletters',
     () => api.get('/newsletters').then((r) => r.data)
@@ -219,6 +229,13 @@ const NewsletterPage = () => {
 
   return (
     <>
+      {flipbook && (
+        <FlipbookViewer
+          pdfUrl={flipbook.pdfLink}
+          title={flipbook.title}
+          onClose={() => setFlipbook(null)}
+        />
+      )}
       <Helmet>
         <title>Regulatory Compliance Bulletins | Absolute Veritas</title>
         <meta name="description" content="Monthly newsletters with regulatory insights on BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC, and IT Compliance from Absolute Veritas." />
@@ -274,7 +291,7 @@ const NewsletterPage = () => {
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {newsletters.map((nl) => (
-                  <NewsletterCard key={nl._id} newsletter={nl} />
+                  <NewsletterCard key={nl._id} newsletter={nl} onOpenFlipbook={setFlipbook} />
                 ))}
               </div>
             )}

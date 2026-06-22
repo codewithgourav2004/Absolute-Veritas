@@ -7,6 +7,30 @@ const MONTH_ORDER = ['January','February','March','April','May','June','July','A
 const toSlug = (title) =>
   slugify(title, { lower: true, strict: true, trim: true });
 
+exports.getNewslettersAdmin = async (req, res) => {
+  try {
+    const newsletters = await Newsletter.find()
+      .sort({ year: -1, createdAt: -1 });
+    newsletters.sort((a, b) => {
+      if (b.year !== a.year) return b.year - a.year;
+      return MONTH_ORDER.indexOf(b.month) - MONTH_ORDER.indexOf(a.month);
+    });
+    res.json(newsletters);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getNewsletterByIdAdmin = async (req, res) => {
+  try {
+    const newsletter = await Newsletter.findById(req.params.id);
+    if (!newsletter) return res.status(404).json({ message: 'Newsletter not found' });
+    res.json(newsletter);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getNewsletters = async (req, res) => {
   try {
     const newsletters = await Newsletter.find({ isPublished: true })

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from 'react-query';
@@ -20,92 +20,9 @@ const downloadHref = (url) => {
   return `/api/download?url=${encodeURIComponent(url)}`;
 };
 
-// ── Embedded PDF viewer (collapsible) ────────────────────────────────────────
-const PdfViewer = ({ url, onClose }) => {
-  const [failed, setFailed] = useState(false);
-
-  return (
-    <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-white">
-      {/* Toolbar */}
-      <div className="bg-indigo px-5 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span className="text-white/70 text-xs font-mono uppercase tracking-widest">PDF Viewer</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs font-semibold transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            Open in new tab
-          </a>
-          <a
-            href={downloadHref(url)}
-            download
-            className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs font-semibold transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download
-          </a>
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 text-white/60 hover:text-crimson text-xs font-bold transition-colors border border-white/20 hover:border-crimson px-3 py-1 rounded-lg"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Close
-          </button>
-        </div>
-      </div>
-
-      {failed ? (
-        <div className="p-10 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-indigo/10 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="text-indigo font-bold text-lg mb-2">PDF cannot be embedded</p>
-          <p className="text-steel text-sm mb-6">The PDF host does not allow inline preview. Please open it directly.</p>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary inline-flex items-center gap-2 px-8 py-3"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            Open PDF
-          </a>
-        </div>
-      ) : (
-        <iframe
-          src={url}
-          title="Newsletter PDF"
-          onError={() => setFailed(true)}
-          style={{ width: '100%', height: '82vh', minHeight: 560, display: 'block', border: 'none' }}
-        />
-      )}
-    </div>
-  );
-};
-
 // ── NewsletterDetail ──────────────────────────────────────────────────────────
 const NewsletterDetail = () => {
   const { id } = useParams();
-  const [pdfOpen,     setPdfOpen]     = useState(false);
   const [flipbookOpen, setFlipbookOpen] = useState(false);
 
   const { data: newsletter, isLoading, isError } = useQuery(
@@ -113,6 +30,11 @@ const NewsletterDetail = () => {
     () => api.get(`/newsletters/${id}`).then((r) => r.data),
     { retry: false }
   );
+
+  // Auto-open flipbook when newsletter loads and has a PDF
+  useEffect(() => {
+    if (newsletter?.pdfLink) setFlipbookOpen(true);
+  }, [newsletter?.pdfLink]);
 
   if (isLoading) return <div className="pt-16"><Loader /></div>;
 
@@ -199,30 +121,6 @@ const NewsletterDetail = () => {
                   </button>
                 )}
 
-                {hasPdf && !pdfOpen && (
-                  <button
-                    onClick={() => { setPdfOpen(true); setTimeout(() => { document.getElementById('pdf-viewer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100); }}
-                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/20 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    Inline View
-                  </button>
-                )}
-
-                {hasPdf && pdfOpen && (
-                  <button
-                    onClick={() => setPdfOpen(false)}
-                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/20 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Close Inline
-                  </button>
-                )}
-
                 {hasPdf && (
                   <a
                     href={downloadHref(newsletter.pdfLink)}
@@ -245,24 +143,17 @@ const NewsletterDetail = () => {
         <div className="bg-pearl section-padding">
           <div className="container-max">
 
-            {/* PDF viewer — shown only when pdfOpen */}
-            {hasPdf && pdfOpen && (
-              <div id="pdf-viewer-section" className="mb-10">
-                <PdfViewer url={newsletter.pdfLink} onClose={() => setPdfOpen(false)} />
-              </div>
-            )}
-
             {/* Written content */}
             {hasContent && (
               <div className="max-w-3xl mx-auto">
                 {newsletter.coverImage && (
-                  <div className="rounded-2xl overflow-hidden shadow-lg mb-10 border border-gray-100">
+                  <div className="relative aspect-[16/7] rounded-2xl overflow-hidden shadow-lg mb-10 border border-gray-100">
                     <img
                       src={normalizeImg(newsletter.coverImage)}
                       alt={newsletter.title}
                       loading="lazy"
                       decoding="async"
-                      className="w-full object-cover max-h-96"
+                      className="absolute inset-0 w-full h-full object-cover object-center"
                     />
                   </div>
                 )}
@@ -285,37 +176,18 @@ const NewsletterDetail = () => {
               </div>
             )}
 
-            {/* If PDF-only and viewer is closed, show a prompt card */}
-            {hasPdf && !hasContent && !pdfOpen && (
-              <div className="max-w-xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-indigo/10 flex items-center justify-center mx-auto mb-5">
-                  <svg className="w-8 h-8 text-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            {/* PDF-only: flipbook opens automatically, show reopen option if closed */}
+            {hasPdf && !hasContent && !flipbookOpen && (
+              <div className="max-w-sm mx-auto text-center py-10">
+                <button
+                  onClick={() => setFlipbookOpen(true)}
+                  className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
-                </div>
-                <p className="text-indigo font-display font-bold text-xl mb-2">Available as PDF</p>
-                <p className="text-steel text-sm mb-6">Click below to read this edition inline or download it.</p>
-                <div className="flex justify-center gap-3 flex-wrap">
-                  <button
-                    onClick={() => setFlipbookOpen(true)}
-                    className="btn-primary inline-flex items-center gap-2 px-7 py-3"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    Read as Flipbook
-                  </button>
-                  <a
-                    href={downloadHref(newsletter.pdfLink)}
-                    download
-                    className="inline-flex items-center gap-2 border border-indigo text-indigo hover:bg-indigo hover:text-white font-semibold px-7 py-3 rounded-xl transition-colors text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download PDF
-                  </a>
-                </div>
+                  Re-open Flipbook
+                </button>
               </div>
             )}
 

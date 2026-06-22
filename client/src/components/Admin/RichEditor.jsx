@@ -38,7 +38,7 @@ const RichEditor = ({ value, onChange, placeholder }) => {
         const fd = new FormData();
         fd.append('image', file);
         const res = await api.post('/upload', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { 'Content-Type': undefined },
           timeout: 30000,
         });
         const quill = quillRef.current?.getEditor();

@@ -158,6 +158,23 @@ exports.getSubscribers = async (req, res) => {
   }
 };
 
+exports.updateSubscriber = async (req, res) => {
+  try {
+    const { name, mobile, isActive } = req.body;
+    const sub = await Subscriber.findByIdAndUpdate(
+      req.params.id,
+      { ...(name   !== undefined && { name }),
+        ...(mobile !== undefined && { mobile }),
+        ...(isActive !== undefined && { isActive }) },
+      { new: true }
+    );
+    if (!sub) return res.status(404).json({ message: 'Subscriber not found.' });
+    res.json(sub);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.deleteSubscriber = async (req, res) => {
   try {
     await Subscriber.findByIdAndDelete(req.params.id);

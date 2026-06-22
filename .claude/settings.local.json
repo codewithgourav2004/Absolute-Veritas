@@ -4,7 +4,12 @@
       "Read(//c/Users/gk154/AppData/Local/Temp/**)",
       "Bash(node test-forms.mjs)",
       "Bash(node -e ' *)",
-      "WebFetch(domain:www.vincular.in)"
+      "WebFetch(domain:www.vincular.in)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(gh auth *)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); \\(Get-Command gh -ErrorAction SilentlyContinue\\).Source)",
+      "Bash(git add *)",
+      "Bash(npm install *)"
     ]
   }
 }

@@ -4,6 +4,7 @@ const {
   subscribe,
   unsubscribe,
   getSubscribers,
+  updateSubscriber,
   deleteSubscriber,
   sendNewsletter,
 } = require('../controllers/subscriberController');
@@ -15,6 +16,7 @@ router.get('/unsubscribe/:token',    unsubscribe);
 
 // Protected
 router.get('/',                      protect, getSubscribers);
+router.put('/:id',                   protect, updateSubscriber);
 router.delete('/:id',               protect, deleteSubscriber);
 router.post('/send/:newsletterId',   protect, sendNewsletter);
 

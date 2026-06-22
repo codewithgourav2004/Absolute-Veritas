@@ -49,11 +49,11 @@ The React client communicates exclusively through the Axios instance at `client/
 ### Backend structure
 `server/index.js` boots Express, wires middleware (Helmet, CORS, gzip compression, Morgan, rate limiter — 100 req/15 min per IP on `/api/*`), mounts routes under `/api/*`, and serves `server/uploads/` as static with a 1-year immutable cache. Each route file maps directly to a controller file of the same name. The `protect` middleware in `server/middleware/auth.js` guards all write endpoints by verifying the JWT.
 
-Public endpoints: `GET /api/services`, `GET /api/blogs`, `GET /api/stats`, `GET /api/testimonials`, `POST /api/enquiries`, `POST /api/auth/login`, `GET /api/health`, `GET /api/news`, `GET /api/news/:slug`, `GET /api/newsletters`, `GET /api/newsletters/:id`.
+Public endpoints: `GET /api/services`, `GET /api/blogs`, `GET /api/stats`, `GET /api/testimonials`, `POST /api/enquiries`, `POST /api/auth/login`, `GET /api/health`, `GET /api/news`, `GET /api/news/:slug`, `GET /api/newsletters`, `GET /api/newsletters/:id`, `GET /api/download?url=<encoded>` (server-side PDF proxy — force-downloads external URLs; add `&inline=1` to serve inline for react-pdf), `POST /api/subscribers/subscribe`, `GET /api/subscribers/unsubscribe/:token`.
 
-Private (JWT required): all POST/PUT/DELETE on services, blogs, testimonials, stats, news, newsletters; `GET /api/enquiries`; `GET /api/news/admin-all` (returns all news including unpublished); `POST /api/upload` (image upload — stores in `server/uploads/`, returns `{ url: '/uploads/<filename>' }`).
+Private (JWT required): all POST/PUT/DELETE on services, blogs, testimonials, stats, news, newsletters; `GET /api/enquiries`; `GET /api/news/admin-all` (returns all news including unpublished); `POST /api/upload` (image upload — stores in `server/uploads/`, returns `{ url: '/uploads/<filename>' }`); `GET /api/subscribers`, `PUT /api/subscribers/:id`, `DELETE /api/subscribers/:id`, `POST /api/subscribers/send/:newsletterId`.
 
-Public read-only API responses carry `Cache-Control`: services/blogs → 5 min, testimonials/stats → 10 min.
+Public read-only API responses carry `Cache-Control`: services/blogs → 5 min, testimonials/stats → 10 min. The `cachePublic` middleware checks `req.headers.authorization` — **authenticated (admin) requests always get `Cache-Control: no-store`** even on GET routes, preventing stale images/data after admin saves.
 
 MongoDB models: `Service`, `Blog`, `Testimonial`, `Enquiry`, `User`, `Stats` (singleton — controller uses `findOne()` and creates a default document if none exists), `News`, `Newsletter`.
 
@@ -63,7 +63,7 @@ Blog list endpoint (`GET /api/blogs`) returns `{ blogs, total, pages, page }` wi
 
 News list endpoint (`GET /api/news`) mirrors blogs: returns `{ news, total, pages, page }` with `content` excluded; `content` only on `GET /api/news/:slug`. Supports `?category=`, `?isTrending=true`, `?page=`, `?limit=` query params. Only `isPublished: true` articles are returned. Admin uses `GET /api/news/admin-all` (JWT required) to fetch all including drafts. Slugs are auto-generated from title.
 
-Newsletter endpoint (`GET /api/newsletters`) returns a flat array of **all** newsletters (published and draft — there is no separate admin endpoint) sorted by year desc then month desc. Fields include `title`, `edition`, `month`, `year`, `excerpt`, `content`, `coverImage`, `pdfLink`, `isPublished`. Individual newsletter fetched by `GET /api/newsletters/:id`.
+Newsletter endpoint (`GET /api/newsletters`) returns a flat array of **all** newsletters (published and draft — there is no separate admin endpoint) sorted by year desc then month desc. Fields include `title`, `edition`, `month`, `year`, `excerpt`, `content`, `coverImage`, `pdfLink`, `isPublished`. Individual newsletter fetched by `GET /api/newsletters/:id`. The `Subscriber` model stores email newsletter subscribers; `POST /api/subscribers/send/:newsletterId` sends the newsletter email to all active subscribers via Nodemailer.
 
 ### Frontend structure
 
@@ -100,6 +100,8 @@ All pages are code-split via `React.lazy()` in `client/src/App.js`.
 - `AdminEnquiriesPage.jsx` — lists all enquiries, filterable by status. Click a row to expand, change status, or open a mailto link.
 - `AdminNewsPage.jsx` — CRUD for news articles with `isTrending`/`isPublished` toggles, category, tags, cover image. Includes a **quick Trending toggle** button per row that PUTs only `{ isTrending }` without opening the edit form. Fetches from `/api/news/admin-all`.
 - `AdminNewsletterPage.jsx` — **tabbed**: "Newsletters" tab manages newsletter editions (title, edition, month, year, excerpt, content, coverImage, pdfLink); "News Articles" tab is a full CRUD for news articles (same fields as AdminNewsPage, including quick Trending toggle). The active tab is controlled by the `?tab=newsletters` or `?tab=news` URL query param (set via `useSearchParams`, synced via `useEffect`). Fetches newsletters from `/api/newsletters` and news from `/api/news/admin-all`.
+- `NewsletterPage.jsx` — grid of newsletter cards. Clicking a card with `pdfLink` opens `FlipbookViewer` directly (via `preventDefault` on the Link + `onOpenFlipbook` callback) — does **not** navigate to detail page. Cards without PDF navigate to `/newsletter/:id`. Includes a `SubscribeSection` at the bottom (POSTs to `/api/subscribers/subscribe`).
+- `NewsletterDetail.jsx` — auto-opens `FlipbookViewer` via `useEffect` when `newsletter.pdfLink` exists. Has a "Re-open Flipbook" button shown only when flipbook is closed. The inline PDF iframe viewer has been removed — `FlipbookViewer` is the only PDF viewer.
 
 All admin pages share `client/src/components/Admin/AdminLayout.jsx`. The sidebar uses `Link` + `useLocation` (not `NavLink`) for active detection — the `isNavActive()` helper checks both `location.pathname` and `location.search` to highlight the correct item when items share a pathname but differ by `?tab=`. Nav items with a `search` field link to `path?search`. The public `Navbar`, `Footer`, `QuickEnquiry`, `FloatingContact`, and `ConsultationPopup` are hidden on all `/admin/*` routes via `location.pathname.startsWith('/admin')` in `Layout` in `App.js`.
 
@@ -179,6 +181,21 @@ Defined in `tailwind.config.js` and used via utility classes throughout:
 - `font-display` → Playfair Display, `font-body` → DM Sans, `font-mono` → JetBrains Mono
 
 Reusable layout utilities defined in `client/src/index.css`: `container-max`, `section-padding`, `card`, `btn-primary`, `glass`.
+
+### FlipbookViewer
+
+`client/src/components/Newsletter/FlipbookViewer.jsx` renders PDFs as an open-book two-page spread using `react-pdf`.
+
+- Always shows **two pages side by side** (left page = `currentPage`, right page = `currentPage + 1`). Navigation advances 2 pages at a time.
+- CSS keyframe animations (`flipNext` / `flipPrev`) are injected once into `<head>` for the page-turn effect.
+- Light background (`#c8cdd8`), dark indigo header/footer, book spine gradient divider, per-page stack depth effect with inner shadow.
+- Progress: dots for PDFs ≤ 20 spreads, progress bar for longer ones.
+- External PDF URLs are proxied through `/api/download?url=<encoded>&inline=1` (`toProxyUrl` helper); download button uses `/api/download?url=<encoded>` (`toDownloadUrl` helper).
+- Keyboard arrow keys and touch swipe supported.
+
+### Admin form image previews
+
+All three admin forms (Blog, News, Newsletter) use `object-contain` for the cover image **preview** in the edit form so the full image is visible without cropping. List/grid thumbnails still use `object-cover`.
 
 ### Key conventions
 - Service, blog, and news slugs are auto-generated server-side via `slugify` on create/update — never set manually. Newsletter slugs exist on the model but the public API uses `_id` for lookup.

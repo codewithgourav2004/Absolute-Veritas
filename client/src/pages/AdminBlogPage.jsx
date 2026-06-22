@@ -122,7 +122,7 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
                 <img
                   src={normalizeImg(preview || coverImage)}
                   alt="cover"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-contain"
                 />
                 {/* Overlay controls */}
                 <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
