@@ -4,10 +4,20 @@ import { Helmet } from 'react-helmet-async';
 import { useQuery } from 'react-query';
 import api from '../utils/api';
 import Loader from '../components/Common/Loader';
+import FlipbookViewer from '../components/Newsletter/FlipbookViewer';
 
 const normalizeImg = (url) => {
   if (!url) return null;
   return url.replace(/^https?:\/\/localhost:\d+/, '');
+};
+
+// For same-origin paths the browser handles download fine.
+// For external URLs we route through our server proxy so the browser
+// always triggers Save-As instead of just opening the file.
+const downloadHref = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('/')) return url; // local upload
+  return `/api/download?url=${encodeURIComponent(url)}`;
 };
 
 // ── Embedded PDF viewer (collapsible) ────────────────────────────────────────
@@ -37,7 +47,7 @@ const PdfViewer = ({ url, onClose }) => {
             Open in new tab
           </a>
           <a
-            href={url}
+            href={downloadHref(url)}
             download
             className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs font-semibold transition-colors"
           >
@@ -95,7 +105,8 @@ const PdfViewer = ({ url, onClose }) => {
 // ── NewsletterDetail ──────────────────────────────────────────────────────────
 const NewsletterDetail = () => {
   const { id } = useParams();
-  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfOpen,     setPdfOpen]     = useState(false);
+  const [flipbookOpen, setFlipbookOpen] = useState(false);
 
   const { data: newsletter, isLoading, isError } = useQuery(
     ['newsletter', id],
@@ -125,6 +136,15 @@ const NewsletterDetail = () => {
         <title>{newsletter.title} | Absolute Veritas</title>
         <meta name="description" content={newsletter.excerpt || `${newsletter.edition} — ${newsletter.month} ${newsletter.year} regulatory compliance bulletin.`} />
       </Helmet>
+
+      {/* Full-screen flipbook overlay */}
+      {flipbookOpen && hasPdf && (
+        <FlipbookViewer
+          pdfUrl={newsletter.pdfLink}
+          title={newsletter.title}
+          onClose={() => setFlipbookOpen(false)}
+        />
+      )}
 
       <div className="pt-16">
         {/* ── Hero ── */}
@@ -166,39 +186,52 @@ const NewsletterDetail = () => {
                   {newsletter.edition}
                 </span>
 
+                {hasPdf && (
+                  <button
+                    onClick={() => setFlipbookOpen(true)}
+                    className="inline-flex items-center gap-2 bg-crimson hover:bg-red-600 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors shadow-lg"
+                  >
+                    {/* Book-flip icon */}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Read as Flipbook
+                  </button>
+                )}
+
                 {hasPdf && !pdfOpen && (
                   <button
                     onClick={() => { setPdfOpen(true); setTimeout(() => { document.getElementById('pdf-viewer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100); }}
-                    className="inline-flex items-center gap-2 bg-crimson hover:bg-red-600 text-white text-xs font-bold px-5 py-2 rounded-full transition-colors shadow-lg"
+                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/20 transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
-                    View PDF Edition
+                    Inline View
                   </button>
                 )}
 
                 {hasPdf && pdfOpen && (
                   <button
                     onClick={() => setPdfOpen(false)}
-                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-5 py-2 rounded-full border border-white/20 transition-colors"
+                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/20 transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    Close PDF
+                    Close Inline
                   </button>
                 )}
 
                 {hasPdf && (
                   <a
-                    href={newsletter.pdfLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-1.5 rounded-full border border-white/20 transition-colors duration-200"
+                    href={downloadHref(newsletter.pdfLink)}
+                    download
+                    className="inline-flex items-center gap-2 bg-white/8 hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/15 transition-colors duration-200"
+                    style={{ background: 'rgba(255,255,255,0.06)' }}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     Download PDF
                   </a>
@@ -264,19 +297,17 @@ const NewsletterDetail = () => {
                 <p className="text-steel text-sm mb-6">Click below to read this edition inline or download it.</p>
                 <div className="flex justify-center gap-3 flex-wrap">
                   <button
-                    onClick={() => { setPdfOpen(true); setTimeout(() => { document.getElementById('pdf-viewer-section')?.scrollIntoView({ behavior: 'smooth' }); }, 100); }}
+                    onClick={() => setFlipbookOpen(true)}
                     className="btn-primary inline-flex items-center gap-2 px-7 py-3"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    Read Inline
+                    Read as Flipbook
                   </button>
                   <a
-                    href={newsletter.pdfLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={downloadHref(newsletter.pdfLink)}
+                    download
                     className="inline-flex items-center gap-2 border border-indigo text-indigo hover:bg-indigo hover:text-white font-semibold px-7 py-3 rounded-xl transition-colors text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

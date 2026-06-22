@@ -56,7 +56,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   immutable: true,
 }));
 
-app.use('/api/upload', require('./routes/upload'));
+app.use('/api/upload',    require('./routes/upload'));
+app.use('/api/download', require('./routes/download'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
