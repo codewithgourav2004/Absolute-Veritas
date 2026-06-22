@@ -96,11 +96,11 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
     try {
       const fd = new FormData();
       fd.append('image', file);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': undefined } });
       setValue('coverImage', res.data.url);
       setPreview(res.data.url);
-    } catch {
-      setUploadError('Upload failed. Try again.');
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Upload failed. Try again.');
     } finally {
       setUploading(false);
     }
@@ -158,48 +158,82 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
         {/* Cover image */}
         <div>
           <label className="block text-sm font-medium text-indigo mb-2">Cover Image</label>
-          <div className="flex gap-4 items-start">
-            <div
-              className="w-40 h-28 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center bg-pearl flex-shrink-0 cursor-pointer hover:border-crimson transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              {(preview || coverImage) ? (
-                <img src={normalizeImg(preview || coverImage)} alt="cover" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center text-gray-400 text-xs p-2">
-                  <svg className="w-8 h-8 mx-auto mb-1 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Click to upload
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+          {/* Preview area */}
+          <div className="relative w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200" style={{ aspectRatio: '16/7' }}>
+            {(preview || coverImage) ? (
+              <>
+                <img
+                  src={normalizeImg(preview || coverImage)}
+                  alt="cover"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Overlay controls */}
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="bg-white text-indigo text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-indigo hover:text-white transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Uploading…' : 'Change Image'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPreview(''); setValue('coverImage', ''); }}
+                    className="bg-white text-crimson text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-crimson hover:text-white transition-colors flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Remove
+                  </button>
                 </div>
-              )}
-            </div>
-            <div className="flex-grow space-y-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+                {/* Image filename badge */}
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <span className="bg-black/50 text-white text-[11px] px-2 py-1 rounded-lg truncate max-w-xs backdrop-blur-sm">
+                    {(preview || coverImage || '').split('/').pop().split('?')[0]}
+                  </span>
+                  <span className="bg-green-500/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm">
+                    ✓ Image set
+                  </span>
+                </div>
+              </>
+            ) : (
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
-                className="px-4 py-2 text-sm bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors disabled:opacity-50"
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-indigo hover:bg-indigo/5 transition-all cursor-pointer w-full"
               >
-                {uploading ? 'Uploading...' : 'Upload Image'}
+                <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{uploading ? 'Uploading…' : 'Click to upload cover image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP · Recommended 1200×500px</p>
+                </div>
               </button>
-              <p className="text-xs text-steel">or paste a URL below</p>
-              <input
-                {...register('coverImage')}
-                placeholder="https://example.com/image.jpg"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
-                onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
-              />
-              {uploadError && <p className="text-crimson text-xs">{uploadError}</p>}
-            </div>
+            )}
           </div>
+
+          {/* URL paste fallback */}
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-steel whitespace-nowrap">Or paste URL:</span>
+            <input
+              {...register('coverImage')}
+              placeholder="https://example.com/image.jpg"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-crimson"
+              onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
+            />
+          </div>
+          {uploadError && <p className="text-crimson text-xs mt-1">{uploadError}</p>}
         </div>
 
         {/* Title */}
@@ -379,6 +413,7 @@ const AdminBlogPage = () => {
   const qc = useQueryClient();
   const [view, setView] = useState('list');
   const [editing, setEditing] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const { data, isLoading } = useQuery('admin-blogs', () =>
     api.get('/blogs?limit=100').then((r) => r.data)
@@ -389,6 +424,19 @@ const AdminBlogPage = () => {
     (id) => api.delete(`/blogs/${id}`),
     { onSuccess: () => qc.invalidateQueries('admin-blogs') }
   );
+
+  const handleEdit = async (blog) => {
+    setEditLoading(blog._id);
+    try {
+      const res = await api.get(`/blogs/${blog.slug}`);
+      setEditing(res.data);
+    } catch {
+      setEditing(blog);
+    } finally {
+      setEditLoading(false);
+    }
+    setView('edit');
+  };
 
   const closeForm = () => { setView('list'); setEditing(null); };
 
@@ -425,52 +473,65 @@ const AdminBlogPage = () => {
             {blogs.map((blog, i) => (
               <div
                 key={blog._id}
-                className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < blogs.length - 1 ? 'border-b border-gray-100' : ''}`}
+                className={`flex items-center gap-5 px-5 py-4 hover:bg-gray-50/70 transition-colors ${i < blogs.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
                 {/* Thumbnail */}
-                <div className="w-16 h-12 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                <div className="w-20 h-[52px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                   {blog.coverImage ? (
-                    <img src={normalizeImg(blog.coverImage)} alt={blog.title} className="w-full h-full object-cover" />
+                    <img
+                      src={normalizeImg(blog.coverImage)}
+                      alt={blog.title}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60" />
+                    <div className="w-full h-full bg-gradient-to-br from-indigo via-indigo/80 to-crimson/60 flex items-center justify-center">
+                      <span className="text-white font-black text-lg leading-none select-none">
+                        {blog.title?.charAt(0)?.toUpperCase() || 'B'}
+                      </span>
+                    </div>
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="flex-grow min-w-0">
-                  <p className="font-semibold text-indigo text-sm truncate">{blog.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-crimson font-medium">{blog.category}</span>
-                    <span className="text-gray-300">·</span>
+                  <p className="font-semibold text-indigo text-sm leading-snug truncate mb-1">{blog.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-semibold text-white bg-crimson/80 px-2 py-0.5 rounded-full">
+                      {blog.category}
+                    </span>
                     <span className="text-xs text-steel">{formatDate(blog.publishedAt)}</span>
-                    <span className="text-gray-300">·</span>
-                    <span className={`text-xs font-semibold ${blog.isPublished ? 'text-green-600' : 'text-amber-500'}`}>
-                      {blog.isPublished ? 'Published' : 'Draft'}
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${blog.isPublished ? 'text-green-700 bg-green-100' : 'text-amber-700 bg-amber-100'}`}>
+                      {blog.isPublished ? '● Published' : '○ Draft'}
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <a
-                    href={`/blog/${blog.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
-                  >
-                    View
-                  </a>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {blog.isPublished && (
+                    <a
+                      href={`/blog/${blog.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors font-medium"
+                    >
+                      View
+                    </a>
+                  )}
                   <button
-                    onClick={() => { setEditing(blog); setView('edit'); }}
-                    className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                    onClick={() => handleEdit(blog)}
+                    disabled={editLoading === blog._id}
+                    className="text-xs text-indigo hover:bg-indigo hover:text-white px-3 py-1.5 rounded-lg border border-indigo/30 hover:border-indigo transition-all font-medium disabled:opacity-60 flex items-center gap-1"
                   >
-                    Edit
+                    {editLoading === blog._id ? (
+                      <><svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Loading…</>
+                    ) : 'Edit'}
                   </button>
                   <button
                     onClick={() => {
                       if (window.confirm(`Delete "${blog.title}"?`)) deleteMutation.mutate(blog._id);
                     }}
-                    className="text-xs text-crimson hover:text-red-700 px-3 py-1.5 rounded-lg border border-crimson/30 hover:border-red-400 transition-colors"
+                    className="text-xs text-crimson hover:bg-crimson hover:text-white px-3 py-1.5 rounded-lg border border-crimson/30 hover:border-crimson transition-all font-medium"
                   >
                     Delete
                   </button>

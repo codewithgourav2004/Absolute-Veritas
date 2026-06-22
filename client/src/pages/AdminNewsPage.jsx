@@ -103,11 +103,11 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
     try {
       const fd = new FormData();
       fd.append('image', file);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': undefined } });
       setValue('coverImage', res.data.url);
       setPreview(res.data.url);
-    } catch {
-      setUploadError('Upload failed. Try again.');
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Upload failed. Try again.');
     } finally {
       setUploading(false);
     }
@@ -165,42 +165,61 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
         {/* Cover image */}
         <div>
           <label className="block text-sm font-medium text-indigo mb-2">Cover Image</label>
-          <div className="flex gap-4 items-start">
-            <div
-              className="w-40 h-28 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center bg-pearl flex-shrink-0 cursor-pointer hover:border-crimson transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              {(preview || coverImage) ? (
-                <img src={normalizeImg(preview || coverImage)} alt="cover" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center text-gray-400 text-xs p-2">
-                  <svg className="w-8 h-8 mx-auto mb-1 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+          <div className="relative w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200" style={{ aspectRatio: '16/7' }}>
+            {(preview || coverImage) ? (
+              <>
+                <img src={normalizeImg(preview || coverImage)} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                    className="bg-white text-indigo text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-indigo hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Uploading…' : 'Change'}
+                  </button>
+                  <button type="button" onClick={() => { setPreview(''); setValue('coverImage', ''); }}
+                    className="bg-white text-crimson text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-crimson hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Remove
+                  </button>
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <span className="bg-black/50 text-white text-[11px] px-2 py-1 rounded-lg truncate max-w-xs backdrop-blur-sm">
+                    {(preview || coverImage || '').split('/').pop().split('?')[0]}
+                  </span>
+                  <span className="bg-green-500/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm">✓ Image set</span>
+                </div>
+              </>
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-indigo hover:bg-indigo/5 transition-all cursor-pointer w-full">
+                <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Click to upload
                 </div>
-              )}
-            </div>
-            <div className="flex-grow space-y-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="px-4 py-2 text-sm bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload Image'}
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{uploading ? 'Uploading…' : 'Click to upload cover image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP · Recommended 1200×500px</p>
+                </div>
               </button>
-              <p className="text-xs text-steel">or paste a URL below</p>
-              <input
-                {...register('coverImage')}
-                placeholder="https://example.com/image.jpg"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
-                onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
-              />
-              {uploadError && <p className="text-crimson text-xs">{uploadError}</p>}
-            </div>
+            )}
           </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-steel whitespace-nowrap">Or paste URL:</span>
+            <input
+              {...register('coverImage')}
+              placeholder="https://example.com/image.jpg"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-crimson"
+              onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
+            />
+          </div>
+          {uploadError && <p className="text-crimson text-xs mt-1">{uploadError}</p>}
         </div>
 
         {/* Title */}
@@ -394,6 +413,7 @@ const AdminNewsPage = () => {
   const qc = useQueryClient();
   const [view, setView] = useState('list');
   const [editing, setEditing] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const { data, isLoading } = useQuery('admin-news', () =>
     api.get('/news/admin-all').then((r) => r.data)
@@ -409,6 +429,19 @@ const AdminNewsPage = () => {
     ({ id, isTrending }) => api.put(`/news/${id}`, { isTrending }),
     { onSuccess: () => qc.invalidateQueries('admin-news') }
   );
+
+  const handleEdit = async (article) => {
+    setEditLoading(article._id);
+    try {
+      const res = await api.get(`/news/${article.slug}`);
+      setEditing(res.data);
+    } catch {
+      setEditing(article);
+    } finally {
+      setEditLoading(false);
+    }
+    setView('edit');
+  };
 
   const closeForm = () => { setView('list'); setEditing(null); };
 
@@ -448,11 +481,15 @@ const AdminNewsPage = () => {
                 className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < articles.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
                 {/* Thumbnail */}
-                <div className="w-16 h-12 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                <div className="w-20 h-[52px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                   {article.coverImage ? (
                     <img src={normalizeImg(article.coverImage)} alt={article.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60" />
+                    <div className="w-full h-full bg-gradient-to-br from-indigo via-indigo/80 to-crimson/60 flex items-center justify-center">
+                      <span className="text-white font-black text-lg leading-none select-none">
+                        {article.title?.charAt(0)?.toUpperCase() || 'N'}
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -500,10 +537,13 @@ const AdminNewsPage = () => {
                     </a>
                   )}
                   <button
-                    onClick={() => { setEditing(article); setView('edit'); }}
-                    className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                    onClick={() => handleEdit(article)}
+                    disabled={editLoading === article._id}
+                    className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors disabled:opacity-60 flex items-center gap-1"
                   >
-                    Edit
+                    {editLoading === article._id ? (
+                      <><svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Loading…</>
+                    ) : 'Edit'}
                   </button>
                   <button
                     onClick={() => {

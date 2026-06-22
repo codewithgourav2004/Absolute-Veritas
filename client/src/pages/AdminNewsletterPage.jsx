@@ -27,13 +27,128 @@ const toHtml = (text) =>
     .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
     .join('\n');
 
+// ── PdfDropZone ───────────────────────────────────────────────────────────────
+const PdfDropZone = ({ onFile, onBrowse, uploading, currentLink }) => {
+  const [dragging, setDragging] = React.useState(false);
+  const [dragError, setDragError] = React.useState('');
+
+  const isUploaded = currentLink && (
+    currentLink.startsWith('/uploads/') ||
+    currentLink.includes('cloudinary.com') ||
+    currentLink.includes('res.cloudinary')
+  );
+  const filename = currentLink
+    ? currentLink.split('/').pop().split('?')[0] || 'uploaded-file.pdf'
+    : '';
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    setDragError('');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setDragError('Only PDF files are allowed.');
+      return;
+    }
+    onFile(file);
+  };
+
+  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = () => setDragging(false);
+
+  if (uploading) {
+    return (
+      <div className="border-2 border-dashed border-indigo/30 rounded-xl bg-indigo/5 px-6 py-10 flex flex-col items-center justify-center gap-3">
+        <svg className="animate-spin w-8 h-8 text-indigo/50" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+        <p className="text-indigo/60 text-sm font-medium">Uploading PDF…</p>
+      </div>
+    );
+  }
+
+  if (isUploaded) {
+    return (
+      <div className="border-2 border-green-300 rounded-xl bg-green-50 px-5 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-green-800 font-semibold text-sm truncate">{filename}</p>
+            <p className="text-green-600 text-xs">PDF uploaded successfully</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onBrowse}
+          className="flex-shrink-0 text-xs text-green-700 border border-green-300 hover:bg-green-100 px-3 py-1.5 rounded-lg font-semibold transition-colors"
+        >
+          Replace
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={onBrowse}
+        className={`
+          relative border-2 border-dashed rounded-xl px-6 py-10 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200
+          ${dragging
+            ? 'border-crimson bg-crimson/5 scale-[1.01]'
+            : 'border-gray-300 bg-gray-50 hover:border-indigo hover:bg-indigo/5'}
+        `}
+      >
+        {/* PDF icon */}
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors pointer-events-none"
+             style={{ background: dragging ? 'rgba(230,57,70,0.1)' : 'rgba(26,31,60,0.07)' }}>
+          <svg className={`w-7 h-7 ${dragging ? 'text-crimson' : 'text-indigo/50'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+
+        <div className="text-center pointer-events-none">
+          <p className={`font-semibold text-sm mb-1 ${dragging ? 'text-crimson' : 'text-indigo'}`}>
+            {dragging ? 'Drop the PDF here' : 'Drag & drop your PDF here'}
+          </p>
+          <p className="text-steel text-xs">
+            or{' '}
+            <span className="text-crimson font-semibold underline">click to browse</span>
+            {' '}from your computer
+          </p>
+          <p className="text-gray-400 text-xs mt-1.5">PDF only · Max 50 MB</p>
+        </div>
+
+        {dragging && (
+          <div className="absolute inset-0 rounded-xl border-2 border-crimson pointer-events-none" />
+        )}
+      </div>
+      {dragError && (
+        <p className="text-crimson text-xs mt-1.5">{dragError}</p>
+      )}
+    </div>
+  );
+};
+
 // ── NewsletterForm ────────────────────────────────────────────────────────────
 const NewsletterForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
-  const fileRef = useRef(null);
-  const [preview, setPreview] = useState(initial?.coverImage || '');
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  const fileRef    = useRef(null);
+  const pdfFileRef = useRef(null);
+  const [preview,      setPreview]      = useState(initial?.coverImage || '');
+  const [uploading,    setUploading]    = useState(false);
+  const [uploadError,  setUploadError]  = useState('');
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfUploadErr, setPdfUploadErr] = useState('');
 
   const {
     register,
@@ -65,13 +180,30 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
     try {
       const fd = new FormData();
       fd.append('image', file);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': undefined } });
       setValue('coverImage', res.data.url);
       setPreview(res.data.url);
-    } catch {
-      setUploadError('Upload failed. Try again.');
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Upload failed. Try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handlePdfUpload = async (file) => {
+    if (!file) return;
+    setPdfUploadErr('');
+    setPdfUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': undefined } });
+      setValue('pdfLink', res.data.url);
+    } catch (err) {
+      setPdfUploadErr(err.response?.data?.message || 'PDF upload failed. Try again.');
+    } finally {
+      setPdfUploading(false);
+      if (pdfFileRef.current) pdfFileRef.current.value = '';
     }
   };
 
@@ -105,42 +237,61 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
         {/* Cover image */}
         <div>
           <label className="block text-sm font-medium text-indigo mb-2">Cover Image</label>
-          <div className="flex gap-4 items-start">
-            <div
-              className="w-32 h-40 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center bg-pearl flex-shrink-0 cursor-pointer hover:border-crimson transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              {(preview || coverImage) ? (
-                <img src={normalizeImg(preview || coverImage)} alt="cover" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center text-gray-400 text-xs p-2">
-                  <svg className="w-8 h-8 mx-auto mb-1 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+          <div className="relative w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200" style={{ aspectRatio: '16/7' }}>
+            {(preview || coverImage) ? (
+              <>
+                <img src={normalizeImg(preview || coverImage)} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                    className="bg-white text-indigo text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-indigo hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Uploading…' : 'Change Image'}
+                  </button>
+                  <button type="button" onClick={() => { setPreview(''); setValue('coverImage', ''); }}
+                    className="bg-white text-crimson text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-crimson hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Remove
+                  </button>
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <span className="bg-black/50 text-white text-[11px] px-2 py-1 rounded-lg truncate max-w-xs backdrop-blur-sm">
+                    {(preview || coverImage || '').split('/').pop().split('?')[0]}
+                  </span>
+                  <span className="bg-green-500/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm">✓ Image set</span>
+                </div>
+              </>
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-indigo hover:bg-indigo/5 transition-all cursor-pointer w-full">
+                <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Click to upload
                 </div>
-              )}
-            </div>
-            <div className="flex-grow space-y-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="px-4 py-2 text-sm bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload Cover'}
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{uploading ? 'Uploading…' : 'Click to upload cover image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP · Recommended 1200×500px</p>
+                </div>
               </button>
-              <p className="text-xs text-steel">or paste a URL below</p>
-              <input
-                {...register('coverImage')}
-                placeholder="https://example.com/newsletter-cover.jpg"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
-                onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
-              />
-              {uploadError && <p className="text-crimson text-xs">{uploadError}</p>}
-            </div>
+            )}
           </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-steel whitespace-nowrap">Or paste URL:</span>
+            <input
+              {...register('coverImage')}
+              placeholder="https://example.com/newsletter-cover.jpg"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-crimson"
+              onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
+            />
+          </div>
+          {uploadError && <p className="text-crimson text-xs mt-1">{uploadError}</p>}
         </div>
 
         {/* Title */}
@@ -211,15 +362,38 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
           </div>
         </div>
 
-        {/* PDF Link */}
+        {/* PDF Upload / Link */}
         <div>
-          <label className="block text-sm font-medium text-indigo mb-1">PDF Link</label>
-          <input
-            {...register('pdfLink')}
-            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson"
-            placeholder="https://example.com/newsletter-june-2026.pdf"
+          <label className="block text-sm font-medium text-indigo mb-2">PDF File</label>
+          <input ref={pdfFileRef} type="file" accept=".pdf,application/pdf" className="hidden"
+            onChange={(e) => handlePdfUpload(e.target.files[0])} />
+
+          {/* Drag-and-drop zone */}
+          <PdfDropZone
+            onFile={(file) => handlePdfUpload(file)}
+            onBrowse={() => pdfFileRef.current?.click()}
+            uploading={pdfUploading}
+            currentLink={watch('pdfLink')}
           />
-          <p className="text-xs text-steel mt-1">Direct link to the PDF file or cloud storage URL.</p>
+
+          {pdfUploadErr && (
+            <p className="text-crimson text-xs mt-2 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              </svg>
+              {pdfUploadErr}
+            </p>
+          )}
+
+          {/* Paste external URL fallback */}
+          <div className="mt-3">
+            <p className="text-xs text-steel mb-1.5">Or paste an external PDF URL:</p>
+            <input
+              {...register('pdfLink')}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-crimson"
+              placeholder="https://example.com/newsletter-june-2026.pdf"
+            />
+          </div>
         </div>
 
         {/* Published toggle */}
@@ -295,11 +469,11 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
     try {
       const fd = new FormData();
       fd.append('image', file);
-      const res = await api.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/upload', fd, { headers: { 'Content-Type': undefined } });
       setValue('coverImage', res.data.url);
       setPreview(res.data.url);
-    } catch {
-      setUploadError('Upload failed. Try again.');
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Upload failed. Try again.');
     } finally {
       setUploading(false);
     }
@@ -335,42 +509,61 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
         {/* Cover image */}
         <div>
           <label className="block text-sm font-medium text-indigo mb-2">Cover Image</label>
-          <div className="flex gap-4 items-start">
-            <div
-              className="w-40 h-28 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden flex items-center justify-center bg-pearl flex-shrink-0 cursor-pointer hover:border-crimson transition-colors"
-              onClick={() => fileRef.current?.click()}
-            >
-              {(preview || coverImage) ? (
-                <img src={normalizeImg(preview || coverImage)} alt="cover" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center text-gray-400 text-xs p-2">
-                  <svg className="w-8 h-8 mx-auto mb-1 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+          <div className="relative w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200" style={{ aspectRatio: '16/7' }}>
+            {(preview || coverImage) ? (
+              <>
+                <img src={normalizeImg(preview || coverImage)} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                    className="bg-white text-indigo text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-indigo hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {uploading ? 'Uploading…' : 'Change'}
+                  </button>
+                  <button type="button" onClick={() => { setPreview(''); setValue('coverImage', ''); }}
+                    className="bg-white text-crimson text-xs font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-crimson hover:text-white transition-colors flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Remove
+                  </button>
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <span className="bg-black/50 text-white text-[11px] px-2 py-1 rounded-lg truncate max-w-xs backdrop-blur-sm">
+                    {(preview || coverImage || '').split('/').pop().split('?')[0]}
+                  </span>
+                  <span className="bg-green-500/90 text-white text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm">✓ Image set</span>
+                </div>
+              </>
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-indigo hover:bg-indigo/5 transition-all cursor-pointer w-full">
+                <div className="w-14 h-14 rounded-2xl bg-gray-200 flex items-center justify-center">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Click to upload
                 </div>
-              )}
-            </div>
-            <div className="flex-grow space-y-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="px-4 py-2 text-sm bg-indigo text-white rounded-lg hover:bg-indigo/90 transition-colors disabled:opacity-50"
-              >
-                {uploading ? 'Uploading...' : 'Upload Image'}
+                <div className="text-center">
+                  <p className="font-semibold text-sm">{uploading ? 'Uploading…' : 'Click to upload cover image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP · Recommended 1200×500px</p>
+                </div>
               </button>
-              <p className="text-xs text-steel">or paste a URL below</p>
-              <input
-                {...register('coverImage')}
-                placeholder="https://example.com/image.jpg"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
-                onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
-              />
-              {uploadError && <p className="text-crimson text-xs">{uploadError}</p>}
-            </div>
+            )}
           </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-steel whitespace-nowrap">Or paste URL:</span>
+            <input
+              {...register('coverImage')}
+              placeholder="https://example.com/image.jpg"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-crimson"
+              onChange={(e) => { setPreview(e.target.value); setValue('coverImage', e.target.value); }}
+            />
+          </div>
+          {uploadError && <p className="text-crimson text-xs mt-1">{uploadError}</p>}
         </div>
 
         {/* Title */}
@@ -648,6 +841,28 @@ const AdminNewsletterPage = () => {
     { enabled: activeTab === 'subscribers' }
   );
 
+  const [editingSubId, setEditingSubId] = useState(null);
+  const [editSubFields, setEditSubFields] = useState({ name: '', mobile: '', isActive: true });
+  const [editSubSaving, setEditSubSaving] = useState(false);
+
+  const startEditSub = (sub) => {
+    setEditingSubId(sub._id);
+    setEditSubFields({ name: sub.name || '', mobile: sub.mobile || '', isActive: sub.isActive });
+  };
+  const cancelEditSub = () => { setEditingSubId(null); };
+  const saveEditSub = async (id) => {
+    setEditSubSaving(true);
+    try {
+      await api.put(`/subscribers/${id}`, editSubFields);
+      qc.invalidateQueries('admin-subscribers');
+      setEditingSubId(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Save failed.');
+    } finally {
+      setEditSubSaving(false);
+    }
+  };
+
   const deleteSubMutation = useMutation(
     (id) => api.delete(`/subscribers/${id}`),
     { onSuccess: () => qc.invalidateQueries('admin-subscribers') }
@@ -664,6 +879,21 @@ const AdminNewsletterPage = () => {
     } catch (err) {
       setSendState((s) => ({ ...s, [nlId]: { loading: false, result: { ok: false, msg: err.response?.data?.message || 'Send failed.' } } }));
     }
+  };
+
+  const [editLoading, setEditLoading] = useState(false);
+
+  const handleEditArticle = async (article) => {
+    setEditLoading(article._id);
+    try {
+      const res = await api.get(`/news/${article.slug}`);
+      setEditing(res.data);
+    } catch {
+      setEditing(article);
+    } finally {
+      setEditLoading(false);
+    }
+    setView('edit');
   };
 
   const closeForm = () => { setView('list'); setEditing(null); };
@@ -757,9 +987,9 @@ const AdminNewsletterPage = () => {
                     key={nl._id}
                     className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < newsletters.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="w-12 h-14 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                    <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
                       {nl.coverImage ? (
-                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="w-full h-full object-cover" />
+                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60 flex items-center justify-center">
                           <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -873,11 +1103,15 @@ const AdminNewsletterPage = () => {
                     key={article._id}
                     className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < newsArticles.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="w-16 h-12 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                    <div className="w-20 h-[52px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                       {article.coverImage ? (
                         <img src={normalizeImg(article.coverImage)} alt={article.title} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60" />
+                        <div className="w-full h-full bg-gradient-to-br from-indigo via-indigo/80 to-crimson/60 flex items-center justify-center">
+                          <span className="text-white font-black text-lg leading-none select-none">
+                            {article.title?.charAt(0)?.toUpperCase() || 'N'}
+                          </span>
+                        </div>
                       )}
                     </div>
 
@@ -922,10 +1156,13 @@ const AdminNewsletterPage = () => {
                         </a>
                       )}
                       <button
-                        onClick={() => { setEditing(article); setView('edit'); }}
-                        className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                        onClick={() => handleEditArticle(article)}
+                        disabled={editLoading === article._id}
+                        className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors disabled:opacity-60 flex items-center gap-1"
                       >
-                        Edit
+                        {editLoading === article._id ? (
+                          <><svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Loading…</>
+                        ) : 'Edit'}
                       </button>
                       <button
                         onClick={() => {
@@ -980,7 +1217,7 @@ const AdminNewsletterPage = () => {
             ) : (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                 {/* Header */}
-                <div className="grid grid-cols-[1fr_130px_110px_100px_80px] gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-steel uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr_140px_110px_110px_120px] gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-steel uppercase tracking-wide">
                   <span>Email / Name</span>
                   <span>Mobile</span>
                   <span>Subscribed</span>
@@ -988,31 +1225,105 @@ const AdminNewsletterPage = () => {
                   <span></span>
                 </div>
                 {subscribers.map((sub, i) => (
-                  <div
-                    key={sub._id}
-                    className={`grid grid-cols-[1fr_130px_110px_100px_80px] gap-4 items-center px-5 py-3.5 hover:bg-gray-50 transition-colors ${i < subscribers.length - 1 ? 'border-b border-gray-100' : ''}`}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-indigo truncate">{sub.email}</p>
-                      {sub.name && <p className="text-xs text-steel truncate">{sub.name}</p>}
+                  <React.Fragment key={sub._id}>
+                    {/* View row */}
+                    <div
+                      className={`grid grid-cols-[1fr_140px_110px_110px_120px] gap-3 items-center px-5 py-3.5 transition-colors ${editingSubId === sub._id ? 'bg-indigo/5' : 'hover:bg-gray-50'} ${i < subscribers.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-indigo truncate">{sub.email}</p>
+                        {sub.name && <p className="text-xs text-steel truncate">{sub.name}</p>}
+                      </div>
+                      <span className="text-xs text-steel">{sub.mobile || '—'}</span>
+                      <span className="text-xs text-steel">{formatDate(sub.subscribedAt || sub.createdAt)}</span>
+                      <span className={`text-xs font-semibold ${sub.isActive ? 'text-green-600' : 'text-amber-500'}`}>
+                        {sub.isActive ? '● Active' : '○ Inactive'}
+                      </span>
+                      <div className="flex justify-end gap-1.5">
+                        {editingSubId === sub._id ? (
+                          <button
+                            onClick={cancelEditSub}
+                            className="text-xs text-steel hover:text-indigo px-2.5 py-1 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => startEditSub(sub)}
+                              className="text-xs text-steel hover:text-indigo px-2.5 py-1 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Remove ${sub.email} from subscribers?`))
+                                  deleteSubMutation.mutate(sub._id);
+                              }}
+                              className="text-xs text-crimson hover:text-red-700 px-2.5 py-1 rounded-lg border border-crimson/30 hover:border-red-400 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs text-steel">{sub.mobile || '—'}</span>
-                    <span className="text-xs text-steel">{formatDate(sub.subscribedAt || sub.createdAt)}</span>
-                    <span className={`text-xs font-semibold ${sub.isActive ? 'text-green-600' : 'text-amber-500'}`}>
-                      {sub.isActive ? '● Active' : '○ Inactive'}
-                    </span>
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Remove ${sub.email} from subscribers?`))
-                            deleteSubMutation.mutate(sub._id);
-                        }}
-                        className="text-xs text-crimson hover:text-red-700 px-2.5 py-1 rounded-lg border border-crimson/30 hover:border-red-400 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
+
+                    {/* Inline edit panel */}
+                    {editingSubId === sub._id && (
+                      <div className={`px-5 py-4 bg-indigo/5 border-b border-indigo/10`}>
+                        <p className="text-xs font-semibold text-indigo mb-3 uppercase tracking-wide">Edit Subscriber</p>
+                        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+                          <div>
+                            <label className="block text-xs text-steel mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={editSubFields.name}
+                              onChange={(e) => setEditSubFields((f) => ({ ...f, name: e.target.value }))}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
+                              placeholder="Full name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-steel mb-1">Mobile</label>
+                            <input
+                              type="tel"
+                              value={editSubFields.mobile}
+                              onChange={(e) => setEditSubFields((f) => ({ ...f, mobile: e.target.value }))}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson"
+                              placeholder="+91 98765 43210"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-steel mb-1">Status</label>
+                            <select
+                              value={editSubFields.isActive ? 'active' : 'inactive'}
+                              onChange={(e) => setEditSubFields((f) => ({ ...f, isActive: e.target.value === 'active' }))}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-crimson bg-white"
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEditSub(sub._id)}
+                            disabled={editSubSaving}
+                            className="btn-primary px-5 py-2 text-xs disabled:opacity-60"
+                          >
+                            {editSubSaving ? 'Saving…' : 'Save Changes'}
+                          </button>
+                          <button
+                            onClick={cancelEditSub}
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-steel hover:bg-gray-50 text-xs font-semibold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
             )}

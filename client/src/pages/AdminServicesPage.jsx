@@ -84,7 +84,7 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
       const fd = new FormData();
       fd.append('image', file);
       const res = await api.post('/upload', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': undefined },
         signal: abortRef.current.signal,
         timeout: 30000,
       });
@@ -275,8 +275,8 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
           <input type="file" accept="image/*" ref={fileRef} onChange={handleFileChange} className="hidden" />
 
           {imageUrl ? (
-            <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ height: 180 }}>
-              <img src={imageUrl} alt="cover" className="w-full h-full object-cover" />
+            <div className="relative w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 180 }}>
+              <img src={imageUrl} alt="cover" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute top-2 right-2 flex gap-1.5">
                 <button
                   type="button"
