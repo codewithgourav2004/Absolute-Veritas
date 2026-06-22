@@ -212,7 +212,7 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       const payload = {
         ...data,
         year: parseInt(data.year, 10),
-        content: data.content ? toHtml(data.content) : '',
+        content: data.content ? (/<[a-z]/i.test(data.content) ? data.content : toHtml(data.content)) : '',
       };
       return initial
         ? api.put(`/newsletters/${initial._id}`, payload)
@@ -222,6 +222,7 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       onSuccess: () => {
         qc.invalidateQueries('admin-newsletters');
         qc.invalidateQueries('newsletters');
+        qc.invalidateQueries('newsletter');
         onSaved();
       },
     }
@@ -793,9 +794,9 @@ const AdminNewsletterPage = () => {
     setSearchParams({ tab: activeTab }, { replace: true });
   }, [activeTab]);
 
-  // Newsletters data
+  // Newsletters data (admin endpoint — returns all including drafts, with content)
   const { data: newsletters = [], isLoading: nlLoading } = useQuery('admin-newsletters', () =>
-    api.get('/newsletters').then((r) => r.data)
+    api.get('/newsletters/admin-all').then((r) => r.data)
   );
 
   // News articles data (for the News tab)
@@ -882,6 +883,19 @@ const AdminNewsletterPage = () => {
   };
 
   const [editLoading, setEditLoading] = useState(false);
+
+  const handleEditNewsletter = async (nl) => {
+    setEditLoading(nl._id);
+    try {
+      const res = await api.get(`/newsletters/admin/${nl._id}`);
+      setEditing(res.data);
+    } catch {
+      setEditing(nl);
+    } finally {
+      setEditLoading(false);
+    }
+    setView('edit');
+  };
 
   const handleEditArticle = async (article) => {
     setEditLoading(article._id);
@@ -1000,7 +1014,18 @@ const AdminNewsletterPage = () => {
                     </div>
 
                     <div className="flex-grow min-w-0">
-                      <p className="font-semibold text-indigo text-sm truncate">{nl.title}</p>
+                      {nl.isPublished ? (
+                        <a
+                          href={`/newsletter/${nl._id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-indigo text-sm truncate hover:text-crimson transition-colors block"
+                        >
+                          {nl.title}
+                        </a>
+                      ) : (
+                        <p className="font-semibold text-indigo text-sm truncate">{nl.title}</p>
+                      )}
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-crimson font-medium">{nl.edition}</span>
                         <span className="text-gray-300">·</span>
@@ -1020,6 +1045,16 @@ const AdminNewsletterPage = () => {
 
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <div className="flex items-center gap-2">
+                        {nl.isPublished && (
+                          <a
+                            href={`/newsletter/${nl._id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors font-medium"
+                          >
+                            View
+                          </a>
+                        )}
                         {nl.pdfLink && (
                           <a
                             href={nl.pdfLink}
@@ -1051,10 +1086,13 @@ const AdminNewsletterPage = () => {
                           ) : '✉ Send to Subscribers'}
                         </button>
                         <button
-                          onClick={() => { setEditing(nl); setView('edit'); }}
-                          className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors"
+                          onClick={() => handleEditNewsletter(nl)}
+                          disabled={editLoading === nl._id}
+                          className="text-xs text-steel hover:text-indigo px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo transition-colors disabled:opacity-60 flex items-center gap-1"
                         >
-                          Edit
+                          {editLoading === nl._id ? (
+                            <><svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> Loading…</>
+                          ) : 'Edit'}
                         </button>
                         <button
                           onClick={() => {
