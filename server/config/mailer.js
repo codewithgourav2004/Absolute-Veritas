@@ -1,25 +1,42 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,        // STARTTLS on port 587
-  requireTLS: true,     // force TLS upgrade — never fall back to plain
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Use Resend in production (set RESEND_API_KEY in env), Gmail locally
+const useResend = process.env.RESEND_API_KEY &&
+                  !process.env.RESEND_API_KEY.startsWith('re_your');
+
+const transporter = useResend
+  ? nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY,
+      },
+    })
+  : nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
 transporter.verify((err) => {
   if (err) {
     console.error('\n❌ MAILER ERROR — emails will NOT be sent.');
-    console.error('   Reason :', err.message);
-    console.error('   Account:', process.env.EMAIL_USER);
-    console.error('   Fix    : generate a fresh Gmail App Password at myaccount.google.com/apppasswords');
-    console.error('            then set EMAIL_PASS=<16-char-password-no-spaces> in server/.env\n');
+    console.error('   Reason:', err.message);
+    if (useResend) {
+      console.error('   Fix   : check RESEND_API_KEY in .env');
+    } else {
+      console.error('   Fix   : check EMAIL_USER / EMAIL_PASS (Gmail App Password) in .env');
+    }
+    console.error();
   } else {
-    console.log(`✅ Mailer ready — sending as ${process.env.EMAIL_FROM || process.env.EMAIL_USER}`);
+    console.log(`✅ Mailer ready — provider: ${useResend ? 'Resend' : 'Gmail'}`);
   }
 });
 
