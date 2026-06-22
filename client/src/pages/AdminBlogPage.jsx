@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import AdminLayout from '../components/Admin/AdminLayout';
-import RichEditor from '../components/Admin/RichEditor';
 
 const BLOG_CATEGORIES = ['Certification', 'Testing', 'Compliance', 'Industry News', 'General'];
 
@@ -21,26 +20,19 @@ const toHtml = (text) =>
     .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
     .join('\n');
 
-const buildPreviewSrc = (html) => {
-  if (!html?.trim()) return '';
-  if (/<!doctype|<html/i.test(html)) return html;
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>*, *::before, *::after { box-sizing: border-box; } body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; color: #374151; line-height: 1.7; padding: 1.5rem; }</style>
-</head>
-<body>${html}</body>
-</html>`;
-};
-
-// Detect initial content mode from stored HTML
-const detectContentMode = (c) => {
-  if (!c) return 'plain';
-  if (/(<script|<style|<!doctype|<link)/i.test(c)) return 'html';
-  if (/<[a-z]/i.test(c)) return 'rich';
-  return 'plain';
+// Convert stored <p> HTML back to plain text for the textarea
+const htmlToText = (html) => {
+  if (!html) return '';
+  return html
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 };
 
 // ── BlogForm ─────────────────────────────────────────────────────────────────
@@ -51,42 +43,20 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
-  const _initMode = detectContentMode(initial?.content);
-  const [contentMode, setContentMode] = useState(_initMode);
-  const [quillValue, setQuillValue] = useState(_initMode === 'rich' ? (initial?.content || '') : '');
-  const [previewSrc, setPreviewSrc] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-  const [richError, setRichError] = useState('');
-
-  const { register, handleSubmit, setValue, watch, clearErrors, setError, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, setValue, watch, setError, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
-      title: initial?.title || '',
-      excerpt: initial?.excerpt || '',
-      content: _initMode !== 'rich' ? (initial?.content || '') : '',
-      category: initial?.category || 'Certification',
-      tags: initial?.tags?.join(', ') || '',
-      author: initial?.author || 'Absolute Veritas',
-      coverImage: initial?.coverImage || '',
+      title:       initial?.title || '',
+      excerpt:     initial?.excerpt || '',
+      content:     htmlToText(initial?.content),
+      category:    initial?.category || 'Certification',
+      tags:        initial?.tags?.join(', ') || '',
+      author:      initial?.author || 'Absolute Veritas',
+      coverImage:  initial?.coverImage || '',
       isPublished: initial?.isPublished ?? false,
     },
   });
 
   const coverImage = watch('coverImage');
-
-  const switchMode = (newMode) => {
-    if (newMode === contentMode) return;
-    const currentText = watch('content') || '';
-    if (newMode === 'rich') {
-      setQuillValue(contentMode === 'plain' ? (currentText ? toHtml(currentText) : '') : currentText);
-    } else if (contentMode === 'rich') {
-      const qHtml = quillValue === '<p><br></p>' ? '' : quillValue;
-      setValue('content', qHtml);
-      clearErrors('content');
-    }
-    setContentMode(newMode);
-    setShowPreview(false);
-    setRichError('');
-  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -108,19 +78,10 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
 
   const saveMutation = useMutation(
     (data) => {
-      let content;
-      if (contentMode === 'rich') {
-        content = (!quillValue || quillValue === '<p><br></p>') ? '' : quillValue;
-      } else if (contentMode === 'html') {
-        content = data.content || '';
-      } else {
-        const raw = data.content || '';
-        content = raw ? toHtml(raw) : '';
-      }
       const payload = {
         ...data,
-        tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        content,
+        tags:    data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        content: data.content ? toHtml(data.content) : '',
       };
       return initial
         ? api.put(`/blogs/${initial._id}`, payload)
@@ -135,13 +96,7 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
   );
 
   const onFormSubmit = (data) => {
-    if (contentMode === 'rich') {
-      if (!quillValue || quillValue === '<p><br></p>') {
-        setRichError('Content is required');
-        return;
-      }
-      setRichError('');
-    } else if (!data.content?.trim()) {
+    if (!data.content?.trim()) {
       setError('content', { message: 'Content is required' });
       return;
     }
@@ -261,87 +216,15 @@ const BlogForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-indigo">Content *</label>
-            {/* 3-mode segmented control */}
-            <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
-              {[
-                { key: 'plain', label: 'Plain' },
-                { key: 'rich',  label: '✦ Rich Editor' },
-                { key: 'html',  label: '</> HTML' },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => switchMode(key)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-                    contentMode === key
-                      ? 'bg-white text-indigo shadow-sm font-semibold'
-                      : 'text-steel hover:text-indigo'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <p className="text-xs text-steel mb-2">
-            {contentMode === 'rich'
-              ? 'Format like a Word document — headings, bold, lists, colours, links, and image uploads.'
-              : contentMode === 'html'
-              ? 'Write full HTML + CSS + JS — rendered in a sandboxed iframe on the website.'
-              : 'Write plain text. Each blank line becomes a new paragraph. No HTML needed.'}
-          </p>
-
-          {contentMode === 'rich' ? (
-            <div>
-              <RichEditor
-                value={quillValue}
-                onChange={(val) => { setQuillValue(val); if (richError) setRichError(''); }}
-                placeholder="Write your blog content — use the toolbar to format headings, lists, links, and more..."
-              />
-              {richError && <p className="text-crimson text-xs mt-1">{richError}</p>}
-            </div>
-          ) : contentMode === 'html' ? (
-            <div>
-              <div className="flex justify-end mb-1.5">
-                <button
-                  type="button"
-                  onClick={() => { setPreviewSrc(buildPreviewSrc(watch('content'))); setShowPreview((s) => !s); }}
-                  className="text-xs px-3 py-1 rounded-full border border-crimson/40 text-crimson hover:bg-crimson/5 transition-colors font-semibold"
-                >
-                  {showPreview ? 'Hide Preview' : '▶ Preview'}
-                </button>
-              </div>
-              <textarea
-                {...register('content')}
-                rows={14}
-                className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y leading-relaxed font-mono"
-                placeholder={`<h2>Section Title</h2>\n<p>Content here...</p>\n<style>\n  h2 { color: #1A1F3C; }\n</style>`}
-              />
-              {errors.content && <p className="text-crimson text-xs mt-1">{errors.content.message}</p>}
-              {showPreview && previewSrc && (
-                <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                  <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-                    <span className="text-xs font-mono text-steel">Preview — sandboxed iframe</span>
-                    <button type="button" onClick={() => setPreviewSrc(buildPreviewSrc(watch('content')))} className="text-xs text-crimson font-semibold hover:underline">Refresh</button>
-                  </div>
-                  <iframe key={previewSrc} srcDoc={previewSrc} sandbox="allow-scripts" style={{ width: '100%', height: 420, border: 'none', display: 'block', background: 'white' }} title="Content preview" />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              <textarea
-                {...register('content')}
-                rows={14}
-                className={`w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y leading-relaxed ${errors.content ? 'border-red-400' : 'border-gray-200'}`}
-                placeholder="Write your blog content here. Leave a blank line between paragraphs..."
-              />
-              {errors.content && <p className="text-crimson text-xs mt-1">{errors.content.message}</p>}
-            </div>
-          )}
+          <label className="block text-sm font-medium text-indigo mb-1">Content *</label>
+          <p className="text-xs text-steel mb-2">Write plain text. Leave a blank line between paragraphs — the template handles all formatting automatically.</p>
+          <textarea
+            {...register('content')}
+            rows={16}
+            className={`w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y leading-relaxed ${errors.content ? 'border-red-400' : 'border-gray-200'}`}
+            placeholder={"Start writing your blog post here.\n\nLeave a blank line to start a new paragraph.\n\nKeep writing naturally — no formatting needed."}
+          />
+          {errors.content && <p className="text-crimson text-xs mt-1">{errors.content.message}</p>}
         </div>
 
         {/* Category + Author row */}

@@ -57,6 +57,24 @@
    Use these class names inside the HTML you paste in the admin panel.
    They are always in the CSS bundle so they survive Tailwind's purge.
 ──────────────────────────────────────────────────────────────────────────── */
+/* ── Blog body template ────────────────────────────────────────────────────── */
+.blog-body p {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: #374151;
+  margin-bottom: 1.6rem;
+}
+.blog-body p:first-child {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #1A1F3C;
+  font-weight: 500;
+}
+.blog-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Service content ───────────────────────────────────────────────────────── */
 .svc-content {
   /* Base typography */
   color: #374151;
