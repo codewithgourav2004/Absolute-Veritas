@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog | Absolute Veritas — TIC & Compliance Insights</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1a2e5a;
+      --navy-dark: #111e3d;
+      --navy-light: #243760;
+      --amber: #f59e0b;
+      --amber-light: #fbbf24;
+      --amber-dark: #d97706;
+      --bg: #f8f9fc;
+      --white: #ffffff;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --text-light: #9ca3af;
+      --border: #e5e7eb;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+      --shadow-hover: 0 20px 40px -8px rgba(0,0,0,0.15), 0 8px 16px -4px rgba(0,0,0,0.08);
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--navy);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .nav-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .logo { color: white; font-weight: 800; font-size: 1.1rem; text-decoration: none; letter-spacing: -0.02em; }
+    .logo span { color: var(--amber); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+    .nav-cta {
+      background: var(--amber);
+      color: var(--navy-dark);
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--amber-light); }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 50%, var(--navy-light) 100%);
+      padding: 80px 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-inner { position: relative; max-width: 700px; margin: 0 auto; }
+    .hero-tag {
+      display: inline-block;
+      background: rgba(245,158,11,0.15);
+      color: var(--amber);
+      border: 1px solid rgba(245,158,11,0.3);
+      padding: 0.3rem 1rem;
+      border-radius: 50px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      color: white;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .hero h1 em { color: var(--amber); font-style: normal; }
+    .hero p {
+      color: rgba(255,255,255,0.7);
+      font-size: 1.1rem;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-stat-value { font-size: 1.5rem; font-weight: 800; color: var(--amber); }
+    .hero-stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 0.1rem; }
+
+    /* ── MAIN LAYOUT ── */
+    .main-wrap { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+    .content-grid { display: grid; grid-template-columns: 1fr 300px; gap: 2.5rem; align-items: start; }
+
+    /* ── FILTER BAR ── */
+    .filter-section { margin-bottom: 2rem; }
+    .filter-section h2 { font-size: 1.4rem; font-weight: 700; color: var(--navy); margin-bottom: 1rem; }
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .filter-btn {
+      padding: 0.45rem 1.1rem;
+      border-radius: 50px;
+      border: 1.5px solid var(--border);
+      background: white;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
+    .filter-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+
+    /* ── BLOG GRID ── */
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    /* ── CARD ── */
+    .blog-card {
+      background: white;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .blog-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: var(--shadow-hover); }
+    .blog-card.hidden { display: none; }
+    .blog-card.fade-out { opacity: 0; transform: scale(0.97); }
+    .blog-card.fade-in { opacity: 1; transform: translateY(0) scale(1); }
+
+    .card-image {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .card-image-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 1rem 1rem 0.5rem;
+      background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .card-body { padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1; }
+    .card-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      width: fit-content;
+    }
+    .card-title {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.45;
+      margin-bottom: 0.6rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-excerpt {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-grow: 1;
+      margin-bottom: 1rem;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 0.875rem;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .card-date { font-size: 0.78rem; color: var(--text-light); display: flex; align-items: center; gap: 0.3rem; }
+    .card-readmore {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--amber-dark);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: gap 0.2s, color 0.2s;
+    }
+    .card-readmore:hover { color: var(--navy); gap: 0.5rem; }
+
+    /* ── NO RESULTS ── */
+    .no-results {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      display: none;
+    }
+    .no-results.show { display: block; }
+    .no-results h3 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+    .no-results p { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+    .sidebar-card { background: white; border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
+    .sidebar-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--navy);
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--amber);
+    }
+
+    /* Recent posts */
+    .recent-post { display: flex; gap: 0.875rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.2s; }
+    .recent-post:last-child { border-bottom: none; padding-bottom: 0; }
+    .recent-post:hover { opacity: 0.75; }
+    .recent-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+    .recent-info { flex-grow: 1; min-width: 0; }
+    .recent-post-title { font-size: 0.82rem; font-weight: 600; color: var(--navy); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.3rem; }
+    .recent-date { font-size: 0.72rem; color: var(--text-light); }
+
+    /* Categories widget */
+    .cat-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .cat-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.875rem;
+      border-radius: 8px;
+      background: var(--bg);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .cat-item:hover { background: var(--navy); color: white; }
+    .cat-count { font-size: 0.75rem; background: white; color: var(--text-muted); padding: 0.15rem 0.5rem; border-radius: 50px; font-weight: 600; }
+    .cat-item:hover .cat-count { background: rgba(255,255,255,0.2); color: white; }
+
+    /* Tags widget */
+    .tags-cloud { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .tag-item {
+      padding: 0.3rem 0.75rem;
+      border-radius: 50px;
+      border: 1.5px solid var(--border);
+      font-size: 0.775rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tag-item:hover { border-color: var(--amber); color: var(--amber-dark); background: #fffbeb; }
+
+    /* ── NEWSLETTER ── */
+    .newsletter {
+      background: linear-gradient(135deg, var(--navy-dark), var(--navy));
+      padding: 4rem 2rem;
+      text-align: center;
+      margin-top: 4rem;
+    }
+    .newsletter-inner { max-width: 580px; margin: 0 auto; }
+    .newsletter h2 { font-size: 1.75rem; font-weight: 800; color: white; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+    .newsletter p { color: rgba(255,255,255,0.65); margin-bottom: 2rem; font-size: 0.95rem; }
+    .newsletter-form { display: flex; gap: 0.75rem; max-width: 480px; margin: 0 auto; }
+    .newsletter-input {
+      flex: 1;
+      padding: 0.875rem 1.25rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .newsletter-input::placeholder { color: rgba(255,255,255,0.4); }
+    .newsletter-input:focus { background: rgba(255,255,255,0.15); border-color: var(--amber); }
+    .newsletter-btn {
+      background: var(--amber);
+      color: var(--navy-dark);
+      border: none;
+      padding: 0.875rem 1.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .newsletter-btn:hover { background: var(--amber-light); transform: translateY(-1px); }
+    .newsletter-note { font-size: 0.78rem; color: rgba(255,255,255,0.35); margin-top: 1rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy-dark);
+      color: rgba(255,255,255,0.5);
+      text-align: center;
+      padding: 1.5rem 2rem;
+      font-size: 0.83rem;
+    }
+    footer a { color: var(--amber); text-decoration: none; }
+
+    /* ── BADGE COLORS ── */
+    .badge-bis { background: #dbeafe; color: #1d4ed8; }
+    .badge-epr { background: #d1fae5; color: #065f46; }
+    .badge-iso { background: #ede9fe; color: #5b21b6; }
+    .badge-business { background: #ccfbf1; color: #0f766e; }
+    .badge-compliance { background: #fef3c7; color: #92400e; }
+    .badge-legal { background: #fee2e2; color: #991b1b; }
+    .badge-vapt { background: #e0f2fe; color: #0369a1; }
+
+    /* ── GRADIENT THEMES ── */
+    .grad-bis { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+    .grad-epr { background: linear-gradient(135deg, #065f46, #10b981); }
+    .grad-iso { background: linear-gradient(135deg, #5b21b6, #8b5cf6); }
+    .grad-business { background: linear-gradient(135deg, #0f766e, #14b8a6); }
+    .grad-compliance { background: linear-gradient(135deg, #92400e, #f59e0b); }
+    .grad-legal { background: linear-gradient(135deg, #991b1b, #ef4444); }
+    .grad-vapt { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .content-grid { grid-template-columns: 1fr; }
+      .sidebar { display: grid; grid-template-columns: repeat(2, 1fr); }
+      .blog-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .blog-grid { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: 1fr; }
+      .nav-links, .nav-cta { display: none; }
+      .hero { padding: 50px 1.25rem; }
+      .hero-stats { gap: 1.5rem; }
+      .newsletter-form { flex-direction: column; }
+      .newsletter-btn { width: 100%; }
+      .main-wrap { padding: 1.5rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">Absolute <span>Veritas</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/services">Services</a></li>
+      <li><a href="/about-us">About Us</a></li>
+      <li><a href="/blog" class="active">Blog</a></li>
+      <li><a href="/contact-us">Contact</a></li>
+    </ul>
+    <a href="/contact-us" class="nav-cta">Get Free Quote</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">Knowledge Hub</div>
+    <h1>Our <em>Blog</em> &amp; Insights</h1>
+    <p>Stay ahead of the curve with expert articles on certifications, compliance regulations, business registrations, and IT security in India.</p>
+    <div class="hero-stats">
+      <div>
+        <div class="hero-stat-value">50+</div>
+        <div class="hero-stat-label">Articles Published</div>
+      </div>
+      <div>
+        <div class="hero-stat-value">7</div>
+        <div class="hero-stat-label">Categories</div>
+      </div>
+      <div>
+        <div class="hero-stat-value">Weekly</div>
+        <div class="hero-stat-label">New Content</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN ── -->
+<div class="main-wrap">
+  <!-- Filter bar -->
+  <div class="filter-section">
+    <h2>Latest Articles</h2>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="compliance">Compliance</button>
+      <button class="filter-btn" data-filter="business">Business Registration</button>
+      <button class="filter-btn" data-filter="legal">Legal Services</button>
+      <button class="filter-btn" data-filter="iso">ISO</button>
+      <button class="filter-btn" data-filter="bis">BIS</button>
+      <button class="filter-btn" data-filter="epr">EPR</button>
+      <button class="filter-btn" data-filter="vapt">VAPT &amp; IT</button>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <!-- ── BLOG GRID ── -->
+    <div>
+      <div class="blog-grid" id="blogGrid">
+
+        <!-- 1 -->
+        <article class="blog-card" data-category="bis">
+          <div class="card-image grad-bis">
+            🏛️
+            <div class="card-image-label">BIS</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-bis">BIS</span>
+            <h3 class="card-title">BIS Certification in Maharashtra: Complete Process Guide</h3>
+            <p class="card-excerpt">Bureau of Indian Standards certification is mandatory for numerous product categories sold in India. This comprehensive guide walks you through the entire BIS application process — from scheme selection and lab testing to ISI mark licensing and renewal timelines specific to Maharashtra.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 June 12, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2 -->
+        <article class="blog-card" data-category="epr">
+          <div class="card-image grad-epr">
+            ♻️
+            <div class="card-image-label">EPR</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-epr">EPR</span>
+            <h3 class="card-title">What is EPR Registration? Everything You Need to Know</h3>
+            <p class="card-excerpt">Extended Producer Responsibility (EPR) is now mandatory for producers, importers, and brand owners of e-waste, plastic, and battery products. Understand who needs to register, how to apply on the CPCB portal, annual targets, and penalties for non-compliance.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 June 5, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 3 -->
+        <article class="blog-card" data-category="iso">
+          <div class="card-image grad-iso">
+            🏅
+            <div class="card-image-label">ISO</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-iso">ISO</span>
+            <h3 class="card-title">ISO 9001:2015 Certification: Step-by-Step Application Process</h3>
+            <p class="card-excerpt">ISO 9001:2015 is the world's most recognized quality management standard. This article breaks down each phase — gap analysis, documentation, internal audit, management review, and certification body audit — with realistic timelines and cost estimates for Indian businesses.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 May 28, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4 -->
+        <article class="blog-card" data-category="business">
+          <div class="card-image grad-business">
+            🏢
+            <div class="card-image-label">Business Registration</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-business">Business Registration</span>
+            <h3 class="card-title">How to Register a Private Limited Company in India 2025</h3>
+            <p class="card-excerpt">Registering a Private Limited Company in India involves obtaining a DIN, DSC, name approval via RUN, filing SPICe+ forms, and getting your Certificate of Incorporation from the MCA. This 2025 guide covers the latest fee structures, timelines, and MCA portal changes.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 May 20, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5 -->
+        <article class="blog-card" data-category="compliance">
+          <div class="card-image grad-compliance">
+            ⚕️
+            <div class="card-image-label">Compliance</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-compliance">Compliance</span>
+            <h3 class="card-title">CDSCO Registration for Medical Devices: Documents &amp; Fees</h3>
+            <p class="card-excerpt">All medical devices sold in India require CDSCO registration under the Medical Devices Rules 2017. This guide covers device classification (Class A, B, C, D), mandatory documents, SUGAM portal filing procedure, government fees, and typical approval timelines for importers and manufacturers.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 May 14, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 6 -->
+        <article class="blog-card" data-category="legal">
+          <div class="card-image grad-legal">
+            ⚖️
+            <div class="card-image-label">Legal Services</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-legal">Legal Services</span>
+            <h3 class="card-title">Trademark Registration in India: Process, Cost &amp; Timeline</h3>
+            <p class="card-excerpt">Protecting your brand through trademark registration is a critical step for businesses in India. This article covers the TM-A application, trademark classes, examination and opposition process, costs involved, and the typical 18–24 month journey to registration — with tips to avoid rejection.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 May 7, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 7 -->
+        <article class="blog-card" data-category="compliance">
+          <div class="card-image grad-compliance">
+            📡
+            <div class="card-image-label">Compliance</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-compliance">Compliance</span>
+            <h3 class="card-title">WPC Approval for Wireless Devices: A Complete Guide for Importers</h3>
+            <p class="card-excerpt">Any wireless or radio-frequency device imported or manufactured in India requires WPC (Wireless Planning &amp; Coordination) approval. Learn the difference between ETA, STA, and Import License, the documentation needed, fee structure, and how to avoid costly delays at customs.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 April 30, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 8 -->
+        <article class="blog-card" data-category="iso">
+          <div class="card-image grad-iso">
+            🔒
+            <div class="card-image-label">ISO</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-iso">ISO</span>
+            <h3 class="card-title">ISO 27001 Information Security Management: Why Your Business Needs It Now</h3>
+            <p class="card-excerpt">With data breaches rising 78% year-on-year, ISO 27001 certification is becoming a procurement requirement for enterprise clients. Understand what ISMS involves, how it differs from a cybersecurity audit, which businesses must prioritise it, and the ROI of certification.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 April 22, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 9 -->
+        <article class="blog-card" data-category="vapt">
+          <div class="card-image grad-vapt">
+            🛡️
+            <div class="card-image-label">VAPT &amp; IT</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-vapt">VAPT &amp; IT</span>
+            <h3 class="card-title">VAPT Testing for Web Applications: What to Expect in 2025</h3>
+            <p class="card-excerpt">Vulnerability Assessment and Penetration Testing (VAPT) is mandatory for RBI-regulated entities, SEBI-listed companies, and increasingly required in government tenders. This article explains the VAPT methodology, OWASP Top 10 coverage, report structure, and how to choose a CERT-In empanelled vendor.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 April 15, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 10 -->
+        <article class="blog-card" data-category="compliance">
+          <div class="card-image grad-compliance">
+            🍽️
+            <div class="card-image-label">Compliance</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-compliance">Compliance</span>
+            <h3 class="card-title">Understanding FSSAI License Categories for Food Businesses in India</h3>
+            <p class="card-excerpt">Whether you're a small home baker or a large food manufacturer, FSSAI compliance is non-negotiable. This guide clarifies which license tier (Basic Registration, State, or Central) applies to your business based on turnover and operations, along with the FoSCoS portal filing process and renewal obligations.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 April 8, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 11 -->
+        <article class="blog-card" data-category="business">
+          <div class="card-image grad-business">
+            📋
+            <div class="card-image-label">Business Registration</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-business">Business Registration</span>
+            <h3 class="card-title">IEC Registration for Import &amp; Export: Step-by-Step Guide 2025</h3>
+            <p class="card-excerpt">An Importer Exporter Code (IEC) is a 10-digit number mandatory for any entity engaged in cross-border trade in India. This guide covers the DGFT portal application, required documents, fee, processing time, and common reasons for rejection — plus how to link IEC with your GST registration.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 March 31, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- 12 -->
+        <article class="blog-card" data-category="bis">
+          <div class="card-image grad-bis">
+            💡
+            <div class="card-image-label">BIS</div>
+          </div>
+          <div class="card-body">
+            <span class="card-badge badge-bis">BIS</span>
+            <h3 class="card-title">CRS Registration Under BIS: Mandatory for Electronics &amp; IT Products</h3>
+            <p class="card-excerpt">The Compulsory Registration Scheme (CRS) under BIS makes it mandatory for 75+ categories of electronics — from mobile phones and laptops to LED lights and set-top boxes — to be registered before sale in India. Learn the eligibility, lab accreditation requirements, and portal filing steps.</p>
+            <div class="card-meta">
+              <span class="card-date">📅 March 24, 2025</span>
+              <a href="#" class="card-readmore">Read More →</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- No results message -->
+        <div class="no-results" id="noResults">
+          <h3>No articles found</h3>
+          <p>Try selecting a different category.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+
+      <!-- Recent Posts -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">Recent Posts</div>
+        <div id="recentPosts">
+          <div class="recent-post">
+            <div class="recent-thumb grad-bis">🏛️</div>
+            <div class="recent-info">
+              <div class="recent-post-title">BIS Certification in Maharashtra: Complete Process Guide</div>
+              <div class="recent-date">June 12, 2025</div>
+            </div>
+          </div>
+          <div class="recent-post">
+            <div class="recent-thumb grad-epr">♻️</div>
+            <div class="recent-info">
+              <div class="recent-post-title">What is EPR Registration? Everything You Need to Know</div>
+              <div class="recent-date">June 5, 2025</div>
+            </div>
+          </div>
+          <div class="recent-post">
+            <div class="recent-thumb grad-iso">🏅</div>
+            <div class="recent-info">
+              <div class="recent-post-title">ISO 9001:2015 Certification: Step-by-Step Application Process</div>
+              <div class="recent-date">May 28, 2025</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">Categories</div>
+        <ul class="cat-list">
+          <li class="cat-item" onclick="filterByCategory('compliance')">📋 Compliance <span class="cat-count">4</span></li>
+          <li class="cat-item" onclick="filterByCategory('bis')">🏛️ BIS <span class="cat-count">2</span></li>
+          <li class="cat-item" onclick="filterByCategory('iso')">🏅 ISO <span class="cat-count">2</span></li>
+          <li class="cat-item" onclick="filterByCategory('business')">🏢 Business Reg. <span class="cat-count">2</span></li>
+          <li class="cat-item" onclick="filterByCategory('legal')">⚖️ Legal Services <span class="cat-count">1</span></li>
+          <li class="cat-item" onclick="filterByCategory('epr')">♻️ EPR <span class="cat-count">1</span></li>
+          <li class="cat-item" onclick="filterByCategory('vapt')">🛡️ VAPT &amp; IT <span class="cat-count">1</span></li>
+        </ul>
+      </div>
+
+      <!-- Tags -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">Popular Tags</div>
+        <div class="tags-cloud">
+          <span class="tag-item" onclick="filterByCategory('bis')">BIS</span>
+          <span class="tag-item" onclick="filterByCategory('epr')">EPR</span>
+          <span class="tag-item" onclick="filterByCategory('iso')">ISO 9001</span>
+          <span class="tag-item" onclick="filterByCategory('iso')">ISO 27001</span>
+          <span class="tag-item" onclick="filterByCategory('compliance')">CDSCO</span>
+          <span class="tag-item" onclick="filterByCategory('compliance')">WPC</span>
+          <span class="tag-item" onclick="filterByCategory('compliance')">FSSAI</span>
+          <span class="tag-item" onclick="filterByCategory('vapt')">VAPT</span>
+          <span class="tag-item" onclick="filterByCategory('legal')">Trademark</span>
+          <span class="tag-item" onclick="filterByCategory('business')">IEC</span>
+          <span class="tag-item" onclick="filterByCategory('business')">Pvt Ltd</span>
+          <span class="tag-item" onclick="filterByCategory('vapt')">Cyber Security</span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="sidebar-card" style="background: var(--navy); color: white;">
+        <div style="font-size:2rem; margin-bottom:0.75rem;">💬</div>
+        <h3 style="font-weight:800; font-size:1rem; margin-bottom:0.5rem;">Need Expert Help?</h3>
+        <p style="color:rgba(255,255,255,0.65); font-size:0.85rem; line-height:1.6; margin-bottom:1.25rem;">Talk to our compliance experts for a free 30-minute consultation.</p>
+        <a href="/contact-us" style="display:block; text-align:center; background:var(--amber); color:var(--navy-dark); font-weight:800; padding:0.75rem; border-radius:8px; text-decoration:none; font-size:0.875rem; transition:background 0.2s;" onmouseover="this.style.background='#fbbf24'" onmouseout="this.style.background='var(--amber)'">Get Free Consultation</a>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- ── NEWSLETTER ── -->
+<section class="newsletter">
+  <div class="newsletter-inner">
+    <h2>Stay Compliance-Ready</h2>
+    <p>Get the latest regulatory updates, certification guides, and compliance alerts delivered to your inbox every week.</p>
+    <form class="newsletter-form" onsubmit="handleSubscribe(event)">
+      <input type="email" class="newsletter-input" placeholder="Enter your work email" required id="emailInput" />
+      <button type="submit" class="newsletter-btn">Subscribe →</button>
+    </form>
+    <p class="newsletter-note" id="subscribeMsg">No spam. Unsubscribe anytime. We respect your privacy.</p>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p>© 2025 Absolute Veritas. All rights reserved. | New Delhi, India | <a href="/contact-us">info@absoluteveritas.com</a></p>
+</footer>
+
+<script>
+  // ── FILTER ──
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const cards = document.querySelectorAll('.blog-card');
+  const noResults = document.getElementById('noResults');
+
+  function filterByCategory(cat) {
+    // sync filter buttons
+    filterBtns.forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === cat || (cat === 'all' && b.dataset.filter === 'all'));
+    });
+    applyFilter(cat);
+    document.getElementById('blogGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function applyFilter(active) {
+    let visible = 0;
+    cards.forEach(card => {
+      const match = active === 'all' || card.dataset.category === active;
+      if (match) {
+        card.classList.remove('hidden');
+        card.style.animation = 'none';
+        card.offsetHeight; // reflow
+        card.style.animation = 'fadeCard 0.35s ease forwards';
+        visible++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+    noResults.classList.toggle('show', visible === 0);
+  }
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilter(btn.dataset.filter);
+    });
+  });
+
+  // ── NEWSLETTER ──
+  function handleSubscribe(e) {
+    e.preventDefault();
+    const msg = document.getElementById('subscribeMsg');
+    const input = document.getElementById('emailInput');
+    msg.textContent = '✅ You\'re subscribed! Watch your inbox for the latest compliance updates.';
+    msg.style.color = '#fbbf24';
+    input.value = '';
+  }
+</script>
+
+<style>
+  @keyframes fadeCard {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+</body>
+</html>

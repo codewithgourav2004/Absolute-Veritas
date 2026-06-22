@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node index.js)",
+      "Bash(taskkill //F //PID 23184)",
+      "Bash(echo \"EXIT: $?\")"
+    ]
+  }
+}

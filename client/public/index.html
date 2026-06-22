@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231A1F3C'/><text x='16' y='22' text-anchor='middle' font-size='18' font-family='serif' font-weight='bold' fill='%23E63946'>AV</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1A1F3C" />
+    <meta name="description" content="Absolute Veritas — India's premier TIC and IT Compliance consultancy. BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC certifications." />
+
+    <!-- Preconnect to font origins so DNS/TLS is resolved before CSS requests them -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Direct stylesheet — display=swap is already in the URL so it's non-render-blocking.
+         Avoid the preload+onload trick: it delays font discovery by one extra round-trip. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+    <!-- Inline critical above-fold styles to eliminate render-blocking paint -->
+    <style>
+      /* Reserve body background immediately so paint doesn't flash white */
+      html { background: #F8F7F4; }
+      /* Stable fallback font metrics for Playfair Display (Georgia baseline) */
+      @font-face {
+        font-family: 'Playfair Display Fallback';
+        src: local('Georgia'), local('Times New Roman');
+        size-adjust: 94%;
+        ascent-override: 89%;
+        descent-override: 22%;
+        line-gap-override: 0%;
+      }
+      /* Stable fallback for DM Sans (system-ui baseline) */
+      @font-face {
+        font-family: 'DM Sans Fallback';
+        src: local('Arial'), local('Helvetica Neue');
+        size-adjust: 101%;
+        ascent-override: 96%;
+        descent-override: 24%;
+        line-gap-override: 0%;
+      }
+    </style>
+
+    <title>Absolute Veritas — TIC & IT Compliance Consultancy</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,468 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-body text-gray-900 bg-pearl;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  /* Prevent image CLS — always reserve inline space */
+  img {
+    display: block;
+    max-width: 100%;
+  }
+}
+
+/* Below-fold sections: skip rendering until near viewport */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 600px;
+}
+
+/* Hero fade-up — replaces Framer Motion on initial load */
+@keyframes hero-fade-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-fade-up {
+  animation: hero-fade-up 0.7s ease forwards;
+}
+
+/* Marquee scroll — GPU-composited via translateX */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+
+/* Respect user's motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade-up { animation: none; opacity: 1; transform: none; }
+  .animate-marquee { animation: none; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* Smooth scroll only when user hasn't opted out of motion */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* ─── Service content components ────────────────────────────────────────────
+   Use these class names inside the HTML you paste in the admin panel.
+   They are always in the CSS bundle so they survive Tailwind's purge.
+──────────────────────────────────────────────────────────────────────────── */
+.svc-content {
+  /* Base typography */
+  color: #374151;
+  line-height: 1.8;
+}
+
+/* ── Headings ── */
+.svc-content h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1A1F3C;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f3f4f6;
+  position: relative;
+}
+.svc-content h2::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 3rem;
+  height: 2px;
+  background: #E63946;
+}
+.svc-content h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1A1F3C;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Lists ── */
+.svc-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+.svc-content ul li {
+  padding: 0.35rem 0 0.35rem 1.6rem;
+  position: relative;
+  color: #374151;
+}
+.svc-content ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: #E63946;
+  border-radius: 50%;
+}
+.svc-content ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+  counter-reset: svc-ol;
+  list-style: none;
+}
+.svc-content ol li {
+  counter-increment: svc-ol;
+  padding: 0.35rem 0 0.35rem 2rem;
+  position: relative;
+  color: #374151;
+}
+.svc-content ol li::before {
+  content: counter(svc-ol);
+  position: absolute;
+  left: 0;
+  top: 0.3rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: #1A1F3C;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Tables ── */
+.svc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.svc-content th {
+  background: #1A1F3C;
+  color: white;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.svc-content td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+.svc-content tr:nth-child(even) td {
+  background: #f9fafb;
+}
+.svc-content tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─────────────────────────────────────────────────────
+   PASTE-READY COMPONENTS
+   Use these class names in admin HTML paste
+───────────────────────────────────────────────────── */
+
+/* Callout boxes — <div class="callout">...</div> */
+.svc-content .callout {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  color: #1e3a5f;
+}
+.svc-content .callout.warning {
+  background: #fffbeb;
+  border-color: #D4AF37;
+  color: #78350f;
+}
+.svc-content .callout.important {
+  background: #fff1f2;
+  border-color: #E63946;
+  color: #881337;
+}
+.svc-content .callout.success {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #14532d;
+}
+.svc-content .callout strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Process steps — <div class="steps"><div class="step">...</div></div> */
+.svc-content .steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  counter-reset: step-counter;
+}
+.svc-content .step {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  counter-increment: step-counter;
+  position: relative;
+}
+.svc-content .step::before {
+  content: counter(step-counter);
+  min-width: 2rem;
+  height: 2rem;
+  background: #1A1F3C;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.svc-content .step b {
+  display: block;
+  color: #1A1F3C;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+/* Two-column grid — <div class="two-col"><div>...</div><div>...</div></div> */
+.svc-content .two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+@media (max-width: 640px) {
+  .svc-content .two-col { grid-template-columns: 1fr; }
+}
+
+/* Info card — <div class="info-card"><h4>Title</h4><p>...</p></div> */
+.svc-content .info-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.svc-content .info-card h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1A1F3C;
+  margin: 0 0 0.5rem;
+}
+.svc-content .info-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Highlight stat — <span class="stat">₹50,000</span> */
+.svc-content .stat {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #E63946;
+}
+
+/* Document checklist — <ul class="doc-list"><li>...</li></ul> */
+.svc-content .doc-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+.svc-content .doc-list li {
+  padding: 0.6rem 0.75rem 0.6rem 2.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  position: relative;
+  color: #374151;
+}
+.svc-content .doc-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0.75rem;
+  color: #22c55e;
+  font-weight: 700;
+}
+.svc-content .doc-list li:last-child {
+  border-bottom: none;
+}
+
+/* FAQ accordion (CSS-only) — <details class="faq"><summary>Q?</summary><p>A</p></details> */
+.svc-content .faq {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.svc-content .faq summary {
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  color: #1A1F3C;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+  transition: background 0.15s;
+}
+.svc-content .faq summary:hover { background: #f3f4f6; }
+.svc-content .faq summary::after {
+  content: '+';
+  font-size: 1.25rem;
+  color: #E63946;
+  flex-shrink: 0;
+  margin-left: 0.75rem;
+  transition: transform 0.2s;
+}
+.svc-content .faq[open] summary::after { content: '−'; }
+.svc-content .faq > *:not(summary) {
+  padding: 1rem 1.25rem;
+  color: #374151;
+  margin: 0;
+}
+
+/* ────────────────────────────────────────────────── */
+
+/* ── Rich Editor (Quill) ─────────────────────────── */
+/* Word import bar sits on top — toolbar has no top border/radius */
+.rich-editor-word-bar {
+  border-bottom: none !important;
+}
+.rich-editor-wrapper .ql-toolbar.ql-snow {
+  border: 1px solid #bfdbfe; /* blue-200 matches word bar */
+  border-top: none;
+  border-bottom: none;
+  border-radius: 0;
+  background: #f9fafb;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.rich-editor-wrapper .ql-container.ql-snow {
+  border: 1px solid #bfdbfe;
+  border-radius: 0 0 0.5rem 0.5rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+.rich-editor-wrapper .ql-editor {
+  min-height: 320px;
+  padding: 1rem 1.25rem;
+  line-height: 1.75;
+  color: #111827;
+}
+.rich-editor-wrapper .ql-editor.ql-blank::before {
+  color: #9ca3af;
+  font-style: normal;
+  left: 1.25rem;
+}
+/* Fix Tailwind preflight resetting button/select inside toolbar */
+.rich-editor-wrapper .ql-toolbar button {
+  width: 28px;
+  height: 28px;
+  padding: 3px 4px;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rich-editor-wrapper .ql-toolbar button:hover,
+.rich-editor-wrapper .ql-toolbar button.ql-active {
+  background: #e5e7eb !important;
+  color: #1A1F3C !important;
+}
+.rich-editor-wrapper .ql-toolbar .ql-stroke { stroke: #4b5563; }
+.rich-editor-wrapper .ql-toolbar .ql-fill   { fill: #4b5563; }
+.rich-editor-wrapper .ql-toolbar button:hover .ql-stroke,
+.rich-editor-wrapper .ql-toolbar button.ql-active .ql-stroke { stroke: #1A1F3C; }
+.rich-editor-wrapper .ql-toolbar button:hover .ql-fill,
+.rich-editor-wrapper .ql-toolbar button.ql-active .ql-fill   { fill: #1A1F3C; }
+.rich-editor-wrapper .ql-toolbar select,
+.rich-editor-wrapper .ql-toolbar .ql-picker-label {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+}
+.rich-editor-wrapper .ql-toolbar .ql-picker-options {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 4px;
+  z-index: 100;
+}
+/* Style content output inside Quill */
+.rich-editor-wrapper .ql-editor h1 { font-size: 1.75rem; font-weight: 800; margin: 1rem 0 0.5rem; color: #1A1F3C; }
+.rich-editor-wrapper .ql-editor h2 { font-size: 1.375rem; font-weight: 700; margin: 0.9rem 0 0.4rem; color: #1A1F3C; }
+.rich-editor-wrapper .ql-editor h3 { font-size: 1.125rem; font-weight: 600; margin: 0.75rem 0 0.35rem; color: #1A1F3C; }
+.rich-editor-wrapper .ql-editor p  { margin: 0 0 0.75rem; }
+.rich-editor-wrapper .ql-editor ul,
+.rich-editor-wrapper .ql-editor ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+.rich-editor-wrapper .ql-editor a  { color: #E63946; text-decoration: underline; }
+.rich-editor-wrapper .ql-editor blockquote {
+  border-left: 4px solid #E63946;
+  padding: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  color: #6b7280;
+  font-style: italic;
+}
+.rich-editor-wrapper .ql-editor img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-crimson text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors duration-200 inline-block;
+  }
+  .btn-outline {
+    @apply border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-indigo transition-colors duration-200 inline-block;
+  }
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+  .container-max {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300;
+  }
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+}

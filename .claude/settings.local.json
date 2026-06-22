@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/gk154/AppData/Local/Temp/**)",
+      "Bash(node test-forms.mjs)",
+      "Bash(node -e ' *)",
+      "WebFetch(domain:www.vincular.in)"
+    ]
+  }
+}
