@@ -1,9 +1,6 @@
-﻿# Absolute-Veritas
 # Absolute Veritas — MERN Stack Website
 
-A full-stack MERN (MongoDB, Express, React, Node.js) website for **Absolute Veritas**, India's premier TIC (Testing, Inspection & Certification) and IT Compliance consultancy. The platform covers regulatory services including BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC, and more.
-
-🔗 Live site: [absoluteveritas.com](https://absoluteveritas.com)
+A full-stack MERN (MongoDB, Express, React, Node.js) website for a TIC (Testing, Inspection & Certification) and IT Compliance consultancy. The platform covers regulatory services including BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC, and more.
 
 ---
 
@@ -19,18 +16,18 @@ A full-stack MERN (MongoDB, Express, React, Node.js) website for **Absolute Veri
 - [Database Schemas](#database-schemas)
 - [Pages & Sections](#pages--sections)
 - [Deployment](#deployment)
-- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
 ---
 
 ## Overview
 
-This repo rebuilds the Absolute Veritas marketing site and admin tooling on a modern MERN stack, replacing the legacy PHP/WordPress setup. Goals:
+This repo implements a modern, performant marketing site and admin tooling on the MERN stack. Goals:
 
-- Faster, leaner front-end (Tailwind + React) vs. the old theme-heavy WordPress stack
-- A proper headless CMS-style admin panel for blogs, services, testimonials, and enquiries
-- Built-in SEO best practices (meta tags, clean URLs, canonical tags) to fix the indexing/crawl issues found on the legacy site
-- A single, consistent design system across all certification/service pages
+- Fast, lean front-end (Tailwind + React)
+- A headless CMS-style admin panel for blogs, services, testimonials, and enquiries
+- Built-in SEO best practices (meta tags, clean URLs, canonical tags)
+- A consistent design system across all certification/service pages
 
 ---
 
@@ -99,9 +96,9 @@ absolute-veritas/
 │   └── src/
 │       ├── components/       ← Navbar, Hero, Services, About, Stats, Testimonials, Blog, Contact, Footer, Common
 │       ├── pages/             ← Home, AboutPage, ServicesPage, ServiceDetail, BlogPage, BlogDetail, ContactPage, LoginPage, NotFound
-│       ├── context/           ← AuthContext, ThemeContext
-│       ├── hooks/              ← useCountUp, useScrollReveal, useFetch
-│       └── utils/              ← api.js, constants.js, helpers.js
+│       ├── context/            ← AuthContext, ThemeContext
+│       ├── hooks/                ← useCountUp, useScrollReveal, useFetch
+│       └── utils/                ← api.js, constants.js, helpers.js
 │
 └── server/                   ← Express backend
     ├── config/                ← db.js, mailer.js
@@ -132,7 +129,7 @@ npm run install-all
 
 # 3. Configure environment variables
 cp server/.env.example server/.env
-# then edit server/.env with your MongoDB URI, JWT secret, email config
+# then edit server/.env with your own MongoDB URI, JWT secret, email config
 
 # 4. Run client + server together
 npm run dev
@@ -152,22 +149,22 @@ node seed.js
 
 ## Environment Variables
 
-Create `server/.env` based on `server/.env.example`:
+Create `server/.env` based on `server/.env.example`. **Never commit a real `.env` file** — only the `.env.example` template with placeholder values should be in version control.
 
 ```env
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/absoluteveritas
-JWT_SECRET=your_super_secret_key
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=replace_with_a_strong_random_secret
 JWT_EXPIRE=7d
 CLIENT_URL=http://localhost:3000
 
 # Email
-EMAIL_HOST=smtp.gmail.com
+EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
-EMAIL_USER=your@gmail.com
+EMAIL_USER=your_email@example.com
 EMAIL_PASS=your_app_password
-EMAIL_FROM=noreply@absoluteveritas.com
+EMAIL_FROM=noreply@example.com
 ```
 
 ---
@@ -269,20 +266,20 @@ EMAIL_FROM=noreply@absoluteveritas.com
 
 ### Home (`/`)
 1. **Navbar** — sticky, glass-blur on scroll, mega-menu (Certification/Testing/Inspection), mobile hamburger
-2. **Hero** — full-screen with scrolling certification ticker; headline "Trusted TIC Partner Across India & 12 Asian Countries"
+2. **Hero** — full-screen with scrolling certification ticker
 3. **Service Tabs** — tabbed explorer (Certification / Testing / Inspection / IT Compliance / Others)
 4. **Stats** — animated counters (clients, projects, years, brands served)
-5. **About** — split panel, "15+ years" callout, USPs
-6. **Why AV** — 3-column USP cards
-7. **International Audits** — horizontal scroll cards (Germany, Sri Lanka, Switzerland, Thailand)
+5. **About** — split panel, key milestones, USPs
+6. **Why Choose Us** — 3-column USP cards
+7. **International Audits** — horizontal scroll cards
 8. **Client Logos** — auto-scrolling marquee
 9. **Testimonials** — Swiper carousel
 10. **Blog** — latest posts grid
-11. **CTA Banner** — "Schedule 30 Minutes Meeting With Us"
+11. **CTA Banner** — meeting scheduler link
 12. **Footer** — links, social, contact form
 
 ### Other routes
-- `/about-us` — full about page, team, mission, certifications (ISO 27001, 9001)
+- `/about-us` — full about page, team, mission, certifications
 - `/services/:slug` — dynamic service detail page
 - `/blog` — paginated listing with category filter
 - `/blog/:slug` — single post + related posts
@@ -316,27 +313,23 @@ npm start
 
 ## Key Features
 
-- ✅ SEO-ready (React Helmet meta tags per page, clean canonical URLs)
+- ✅ SEO-ready (meta tags per page, clean canonical URLs)
 - ✅ Mobile-first, fully responsive (Tailwind breakpoints)
 - ✅ JWT-protected admin panel for content management
 - ✅ Automatic email notifications on new enquiries
 - ✅ Floating quick-enquiry widget on all pages
-- ✅ Framer Motion scroll reveals & animated counters
-- ✅ API rate limiting & Helmet security headers
+- ✅ Scroll reveals & animated counters
+- ✅ API rate limiting & security headers
 - ✅ Bcrypt-hashed passwords, JWT auth
 
 ---
 
-## Roadmap
+## Contributing
 
-- [ ] Migrate existing blog content from WordPress `/blog/` subfolder
-- [ ] Fix legacy duplicate-URL / crawl-budget indexing issues identified in Search Console
-- [ ] Wire up LinkedIn content agent to auto-publish approved blog posts
-- [ ] Add multi-language support for regional clients
-- [ ] Set up CI/CD pipeline for staging → production deploys
+Issues and pull requests are welcome. Please open an issue first to discuss any significant changes.
 
 ---
 
 ## License
 
-Proprietary — © Absolute Veritas. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
