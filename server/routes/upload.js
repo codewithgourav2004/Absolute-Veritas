@@ -5,7 +5,7 @@ const { protect } = require('../middleware/auth');
 
 router.post('/', protect, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-  res.json({ url: `/uploads/${req.file.filename}` });
+  res.json({ url: req.file.path });
 });
 
 module.exports = router;
