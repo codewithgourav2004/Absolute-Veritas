@@ -18,7 +18,8 @@ connectDB();
 app.use(compression());
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const allowedOrigin = (process.env.CLIENT_URL || '').replace(/\/$/, '');
+app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
