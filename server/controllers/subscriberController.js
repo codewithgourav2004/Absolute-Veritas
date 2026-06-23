@@ -231,16 +231,24 @@ exports.broadcastNewsletter = async (nl) => {
 
 exports.sendCustomEmail = async (req, res) => {
   try {
-    const { subject, body, recipientIds } = req.body;
+    const { subject, body, recipientIds, extraEmails: extraRaw, addToList } = req.body;
     if (!subject || !subject.trim()) return res.status(400).json({ message: 'Subject is required.' });
     if (!body    || !body.trim())    return res.status(400).json({ message: 'Body is required.' });
 
+    // Parse subscriber IDs
     let ids;
-    try { ids = recipientIds ? JSON.parse(recipientIds) : 'all'; } catch { ids = 'all'; }
+    try { ids = recipientIds ? JSON.parse(recipientIds) : []; } catch { ids = []; }
 
-    const filter = ids === 'all' ? { isActive: true } : { _id: { $in: ids }, isActive: true };
-    const subscribers = await Subscriber.find(filter);
-    if (!subscribers.length) return res.status(400).json({ message: 'No active subscribers match the selection.' });
+    // Parse extra emails (manual/excel imports)
+    let extras = [];
+    try { extras = extraRaw ? JSON.parse(extraRaw) : []; } catch { extras = []; }
+
+    const subscribers = ids.length
+      ? await Subscriber.find({ _id: { $in: ids }, isActive: true })
+      : [];
+
+    if (!subscribers.length && !extras.length)
+      return res.status(400).json({ message: 'No recipients selected.' });
 
     const apiUrl  = (process.env.SERVER_URL || 'https://absolute-veritas.onrender.com').replace(/\/$/, '');
     const attachments = (req.files || []).map((f) => ({
@@ -249,13 +257,14 @@ exports.sendCustomEmail = async (req, res) => {
       contentType: f.mimetype,
     }));
 
-    // Paragraph-wrap plain-text lines (if no HTML tags detected)
-    const hasHtml = /<[a-z][\s\S]*>/i.test(body);
+    const hasHtml  = /<[a-z][\s\S]*>/i.test(body);
     const bodyHtml = hasHtml
       ? body
       : body.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('');
 
     let sent = 0, failed = 0;
+
+    // Send to existing subscribers (with personal unsubscribe link)
     for (const sub of subscribers) {
       const unsubUrl = `${apiUrl}/api/subscribers/unsubscribe/${sub.unsubscribeToken}`;
       try {
@@ -273,8 +282,51 @@ exports.sendCustomEmail = async (req, res) => {
       }
     }
 
+    // Send to extra/imported emails
+    for (const extra of extras) {
+      const email = (extra.email || '').trim().toLowerCase();
+      if (!email) continue;
+
+      // Reuse existing subscriber token if they're already in DB
+      let token = null;
+      const existing = await Subscriber.findOne({ email });
+      if (existing) {
+        token = existing.unsubscribeToken;
+      } else if (addToList === 'true') {
+        // Add to subscriber list before sending
+        try {
+          const newSub = await Subscriber.create({
+            email,
+            name: (extra.name || '').trim(),
+          });
+          token = newSub.unsubscribeToken;
+        } catch { /* duplicate — fetch it */
+          const found = await Subscriber.findOne({ email });
+          token = found?.unsubscribeToken;
+        }
+      }
+
+      const unsubUrl = token
+        ? `${apiUrl}/api/subscribers/unsubscribe/${token}`
+        : `${apiUrl.replace('/api', '')}/#unsubscribe`;
+
+      try {
+        await transporter.sendMail({
+          from:        `"Absolute Veritas" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+          to:          email,
+          subject:     subject.trim(),
+          html:        customEmail(subject.trim(), bodyHtml, unsubUrl),
+          attachments,
+        });
+        sent++;
+      } catch (e) {
+        console.error(`Custom email failed for ${email}:`, e.message);
+        failed++;
+      }
+    }
+
     res.json({
-      message: `Sent to ${sent} subscriber${sent !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}.`,
+      message: `Sent to ${sent} recipient${sent !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}.`,
       sent,
       failed,
     });

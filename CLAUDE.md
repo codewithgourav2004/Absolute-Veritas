@@ -86,7 +86,8 @@ All pages are code-split via `React.lazy()` in `client/src/App.js`.
 - `/admin/services` → `AdminServicesPage.jsx` (protected)
 - `/admin/blogs` → `AdminBlogPage.jsx` (protected)
 - `/admin/news` → `AdminNewsPage.jsx` (protected)
-- `/admin/newsletters` → `AdminNewsletterPage.jsx` (protected — tabbed: Newsletters + News Articles)
+- `/admin/newsletters` → `AdminNewsletterPage.jsx` (protected — tabbed: Newsletters + News Articles + Subscribers)
+- `/admin/email` → `AdminEmailPage.jsx` (protected)
 
 **Pages** (`client/src/pages/`):
 - `Home.jsx` — assembles Hero, ServicesSection, Stats, About, Testimonials, BlogSection, TrendingNewsSection, ClientMarquee, InternationalAudits, ConsultationPopup.
@@ -99,11 +100,12 @@ All pages are code-split via `React.lazy()` in `client/src/App.js`.
 - `AdminServicesPage.jsx` — CRUD for services (name, category, subcategory fields, description, icon, image, **content** body, features list, display order, isActive toggle). Has drag-to-reorder rows. The content field has two modes: **plain text** (auto-converted via `toHtml()`) and **HTML/JS/CSS mode** (stored as-is). HTML/JS/CSS mode shows a `▶ Preview` button that renders a live sandboxed iframe preview below the textarea. Fetches all services including inactive via `?includeInactive=true`.
 - `AdminEnquiriesPage.jsx` — lists all enquiries, filterable by status. Click a row to expand, change status, or open a mailto link.
 - `AdminNewsPage.jsx` — CRUD for news articles with `isTrending`/`isPublished` toggles, category, tags, cover image. Includes a **quick Trending toggle** button per row that PUTs only `{ isTrending }` without opening the edit form. Fetches from `/api/news/admin-all`.
-- `AdminNewsletterPage.jsx` — **tabbed**: "Newsletters" tab manages newsletter editions (title, edition, month, year, excerpt, content, coverImage, pdfLink); "News Articles" tab is a full CRUD for news articles (same fields as AdminNewsPage, including quick Trending toggle). The active tab is controlled by the `?tab=newsletters` or `?tab=news` URL query param (set via `useSearchParams`, synced via `useEffect`). Fetches newsletters from `/api/newsletters` and news from `/api/news/admin-all`.
+- `AdminNewsletterPage.jsx` — **tabbed**: "Newsletters" tab manages newsletter editions (title, edition, month, year, excerpt, content, coverImage, pdfLink); "News Articles" tab is a full CRUD for news articles (same fields as AdminNewsPage, including quick Trending toggle); "Subscribers" tab lists all email subscribers with active/inactive toggle and delete. The active tab is controlled by `?tab=newsletters`, `?tab=news`, or `?tab=subscribers` URL query param. Fetches newsletters from `/api/newsletters` and news from `/api/news/admin-all`.
+- `AdminEmailPage.jsx` — compose and send custom emails to subscribers. Supports subject, plain-text or HTML body (toggle), file attachments (drag-and-drop, ≤10 MB, ≤5 files), per-subscriber selection with search filter, and a confirmation dialog before sending. POSTs to `/api/subscribers/send-email` (multipart/form-data).
 - `NewsletterPage.jsx` — grid of newsletter cards. Clicking a card with `pdfLink` opens `FlipbookViewer` directly (via `preventDefault` on the Link + `onOpenFlipbook` callback) — does **not** navigate to detail page. Cards without PDF navigate to `/newsletter/:id`. Includes a `SubscribeSection` at the bottom (POSTs to `/api/subscribers/subscribe`).
 - `NewsletterDetail.jsx` — auto-opens `FlipbookViewer` via `useEffect` when `newsletter.pdfLink` exists. Has a "Re-open Flipbook" button shown only when flipbook is closed. The inline PDF iframe viewer has been removed — `FlipbookViewer` is the only PDF viewer.
 
-All admin pages share `client/src/components/Admin/AdminLayout.jsx`. The sidebar uses `Link` + `useLocation` (not `NavLink`) for active detection — the `isNavActive()` helper checks both `location.pathname` and `location.search` to highlight the correct item when items share a pathname but differ by `?tab=`. Nav items with a `search` field link to `path?search`. The public `Navbar`, `Footer`, `QuickEnquiry`, `FloatingContact`, and `ConsultationPopup` are hidden on all `/admin/*` routes via `location.pathname.startsWith('/admin')` in `Layout` in `App.js`.
+All admin pages share `client/src/components/Admin/AdminLayout.jsx`. The sidebar uses `Link` + `useLocation` (not `NavLink`) for active detection — the `isNavActive()` helper checks both `location.pathname` and `location.search` to highlight the correct item when items share a pathname but differ by `?tab=`. Nav items with a `search` field link to `path?search`. Pass `back={fn}` to render a "← Back to list" button at the top of the content area (used by all CRUD pages to return from the edit form to the list view). The public `Navbar`, `Footer`, `QuickEnquiry`, `FloatingContact`, and `ConsultationPopup` are hidden on all `/admin/*` routes via `location.pathname.startsWith('/admin')` in `Layout` in `App.js`.
 
 **State**:
 - Server state via `react-query`. Query keys: `['services', category]`, `['services-all', activeCategory]`, `['services-grouped', category]`, `['blogs', category, page]`, `'blogs-preview'`, `'stats'`, `'admin-blogs'`, `'admin-services'`, `['admin-enquiries', statusFilter]`, `'admin-news'`, `'nl-news'` (news inside AdminNewsletterPage), `'admin-newsletters'`, `'newsletters'`, `'trending-news-home'`, `['news', category]`.
@@ -190,7 +192,7 @@ Reusable layout utilities defined in `client/src/index.css`: `container-max`, `s
 - CSS keyframe animations (`flipNext` / `flipPrev`) are injected once into `<head>` for the page-turn effect.
 - Light background (`#c8cdd8`), dark indigo header/footer, book spine gradient divider, per-page stack depth effect with inner shadow.
 - Progress: dots for PDFs ≤ 20 spreads, progress bar for longer ones.
-- External PDF URLs are proxied through `/api/download?url=<encoded>&inline=1` (`toProxyUrl` helper); download button uses `/api/download?url=<encoded>` (`toDownloadUrl` helper).
+- `toProxyUrl` always routes through `/api/download?url=<encoded>&inline=1` — even for `/uploads/` paths — so PDF.js never makes a direct cross-origin fetch. `toDownloadUrl` for `/uploads/` paths links directly to `${SERVER_BASE}/uploads/...` (no proxy needed for download); external URLs still go through `/api/download?url=<encoded>`.
 - Keyboard arrow keys and touch swipe supported.
 
 ### Admin form image previews
@@ -201,7 +203,7 @@ All three admin forms (Blog, News, Newsletter) use `object-contain` for the cove
 - Service, blog, and news slugs are auto-generated server-side via `slugify` on create/update — never set manually. Newsletter slugs exist on the model but the public API uses `_id` for lookup.
 - Blog `BlogCard` (numbered list row) and `BlogCardFeatured` (horizontal hero card) are both exported from `client/src/components/Blog/BlogCard.jsx`. Import as `import BlogCard, { BlogCardFeatured } from '…/BlogCard'`.
 - Category badge colours for blog cards are defined in the `CATEGORY_COLORS` map at the top of `BlogCard.jsx`.
-- Uploaded files land in `server/uploads/` and are served at `/uploads/<filename>`. Upload endpoint returns `{ url: '/uploads/<filename>' }` and the stored value is the path only (no hostname). Use `normalizeImg()` helper (defined locally in each component that needs it) to strip any `localhost:PORT` prefix when displaying images.
+- Uploaded files land in `server/uploads/` and are served at `/uploads/<filename>`. Upload endpoint returns `{ url: '/uploads/<filename>' }` and the stored value is the path only (no hostname). Use `normalizeImg()` from `client/src/utils/normalizeImg.js` — it strips any `localhost:PORT` prefix and prepends `REACT_APP_API_URL` origin for `/uploads/` paths so images resolve correctly in production (where the Render backend is a different host than the Netlify frontend).
 - The `api.js` response interceptor redirects to `/admin/login` on any `401` **except** `/auth/login` itself.
 - `GET /api/services` filters `isActive: true` by default; pass `?includeInactive=true` to get all (used by admin).
 - Quick-toggle mutations (isTrending, isActive) PUT only the changed field — the controllers use `findByIdAndUpdate` which does a `$set`, so partial payloads are safe.

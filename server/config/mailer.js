@@ -41,8 +41,11 @@ const sendViaBrevo = (from, to, subject, html, attachments) => new Promise((reso
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
-      if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
-      else reject(new Error(`Brevo API ${res.statusCode}: ${data}`));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        try { resolve(data ? JSON.parse(data) : {}); } catch { resolve({}); }
+      } else {
+        reject(new Error(`Brevo API ${res.statusCode}: ${data}`));
+      }
     });
   });
 

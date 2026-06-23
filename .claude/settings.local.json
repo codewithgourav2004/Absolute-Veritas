@@ -16,7 +16,9 @@
       "Bash(node --check config/mailer.js)",
       "Bash(node --check controllers/blogController.js)",
       "Bash(curl -s http://localhost:5000/api/blogs)",
-      "Bash(npx react-scripts *)"
+      "Bash(npx react-scripts *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5000/api/subscribers -H \"Authorization: Bearer invalidtoken\")",
+      "Bash(curl -s http://localhost:5000/api/newsletters)"
     ]
   }
 }
