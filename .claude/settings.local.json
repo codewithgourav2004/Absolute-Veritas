@@ -9,7 +9,14 @@
       "PowerShell(gh auth *)",
       "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); \\(Get-Command gh -ErrorAction SilentlyContinue\\).Source)",
       "Bash(git add *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('./index.js'\\)\")",
+      "Bash(node --check controllers/subscriberController.js)",
+      "Bash(node --check routes/subscribers.js)",
+      "Bash(node --check config/mailer.js)",
+      "Bash(node --check controllers/blogController.js)",
+      "Bash(curl -s http://localhost:5000/api/blogs)",
+      "Bash(npx react-scripts *)"
     ]
   }
 }
