@@ -1,32 +1,55 @@
 const nodemailer = require('nodemailer');
+const https = require('https');
 
 const useBrevo  = !!process.env.BREVO_SMTP_KEY;
 const useResend = !useBrevo &&
                   process.env.RESEND_API_KEY &&
                   !process.env.RESEND_API_KEY.startsWith('re_your');
 
+// Brevo REST API call (port 443 — works on Render free tier)
+const sendViaBrevo = (from, to, subject, html) => new Promise((resolve, reject) => {
+  const fromEmail = from.match(/<(.+)>/)?.[1] || from;
+  const fromName  = from.match(/^"?([^"<]+)"?\s*</)?.[1]?.trim() || 'Absolute Veritas';
+  const toArr     = Array.isArray(to) ? to : [to];
+
+  const body = JSON.stringify({
+    sender:      { name: fromName, email: fromEmail },
+    to:          toArr.map(e => ({ email: e })),
+    subject,
+    htmlContent: html,
+  });
+
+  const req = https.request({
+    hostname: 'api.brevo.com',
+    path:     '/v3/smtp/email',
+    method:   'POST',
+    headers:  {
+      'api-key':       process.env.BREVO_SMTP_KEY,
+      'Content-Type':  'application/json',
+      'Content-Length': Buffer.byteLength(body),
+    },
+  }, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(data));
+      else reject(new Error(`Brevo API ${res.statusCode}: ${data}`));
+    });
+  });
+
+  req.on('error', reject);
+  req.write(body);
+  req.end();
+});
+
 let transporter;
 
 if (useBrevo) {
-  transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.BREVO_EMAIL,
-      pass: process.env.BREVO_SMTP_KEY,
-    },
-  });
-
-  transporter.verify((err) => {
-    if (err) {
-      console.error('\n❌ MAILER ERROR — emails will NOT be sent.');
-      console.error('   Reason:', err.message);
-      console.error('   Fix   : check BREVO_EMAIL / BREVO_SMTP_KEY in .env');
-    } else {
-      console.log('✅ Mailer ready — provider: Brevo');
-    }
-  });
+  transporter = {
+    sendMail: ({ from, to, subject, html }) => sendViaBrevo(from, to, subject, html),
+    verify:   (cb) => cb(null),
+  };
+  console.log('✅ Mailer ready — provider: Brevo (HTTP API)');
 
 } else if (useResend) {
   const { Resend } = require('resend');
@@ -40,7 +63,6 @@ if (useBrevo) {
     },
     verify: (cb) => cb(null),
   };
-
   console.log('✅ Mailer ready — provider: Resend (HTTP API)');
 
 } else {
