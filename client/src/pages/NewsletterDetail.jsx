@@ -7,13 +7,13 @@ import Loader from '../components/Common/Loader';
 import FlipbookViewer from '../components/Newsletter/FlipbookViewer';
 import normalizeImg from '../utils/normalizeImg';
 
-// For same-origin paths the browser handles download fine.
-// For external URLs we route through our server proxy so the browser
-// always triggers Save-As instead of just opening the file.
+const API_BASE = (process.env.REACT_APP_API_URL || '/api').replace(/\/$/, '');
+const SERVER_BASE = API_BASE.replace(/\/api$/, '');
+
 const downloadHref = (url) => {
   if (!url) return '#';
-  if (url.startsWith('/')) return url; // local upload
-  return `/api/download?url=${encodeURIComponent(url)}`;
+  if (url.startsWith('/')) return `${SERVER_BASE}${url}`;
+  return `${API_BASE}/download?url=${encodeURIComponent(url)}`;
 };
 
 // ── NewsletterDetail ──────────────────────────────────────────────────────────

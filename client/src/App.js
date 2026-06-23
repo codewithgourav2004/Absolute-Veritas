@@ -27,6 +27,7 @@ const NewsDetail         = lazy(() => import('./pages/NewsDetail'));
 const NewsletterPage     = lazy(() => import('./pages/NewsletterPage'));
 const AdminNewsPage         = lazy(() => import('./pages/AdminNewsPage'));
 const AdminNewsletterPage   = lazy(() => import('./pages/AdminNewsletterPage'));
+const AdminEmailPage        = lazy(() => import('./pages/AdminEmailPage'));
 const NewsletterDetail      = lazy(() => import('./pages/NewsletterDetail'));
 const NotFound           = lazy(() => import('./pages/NotFound'));
 
@@ -58,6 +59,7 @@ function Layout() {
             <Route path="/newsletter/:id"   element={<NewsletterDetail />} />
             <Route path="/admin/news"       element={<ProtectedRoute><AdminNewsPage /></ProtectedRoute>} />
             <Route path="/admin/newsletters" element={<ProtectedRoute><AdminNewsletterPage /></ProtectedRoute>} />
+            <Route path="/admin/email"       element={<ProtectedRoute><AdminEmailPage /></ProtectedRoute>} />
             <Route path="*"            element={<NotFound />} />
           </Routes>
         </Suspense>

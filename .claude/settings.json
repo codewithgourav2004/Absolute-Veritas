@@ -5,7 +5,9 @@
       "Bash(node index.js)",
       "Bash(taskkill //F //PID 23184)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

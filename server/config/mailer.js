@@ -7,17 +7,26 @@ const useResend = !useBrevo &&
                   !process.env.RESEND_API_KEY.startsWith('re_your');
 
 // Brevo REST API call (port 443 — works on Render free tier)
-const sendViaBrevo = (from, to, subject, html) => new Promise((resolve, reject) => {
+const sendViaBrevo = (from, to, subject, html, attachments) => new Promise((resolve, reject) => {
   const fromEmail = from.match(/<(.+)>/)?.[1] || from;
   const fromName  = from.match(/^"?([^"<]+)"?\s*</)?.[1]?.trim() || 'Absolute Veritas';
   const toArr     = Array.isArray(to) ? to : [to];
 
-  const body = JSON.stringify({
+  const payload = {
     sender:      { name: fromName, email: fromEmail },
     to:          toArr.map(e => ({ email: e })),
     subject,
     htmlContent: html,
-  });
+  };
+
+  if (attachments && attachments.length) {
+    payload.attachment = attachments.map(a => ({
+      name:    a.filename || a.name,
+      content: Buffer.isBuffer(a.content) ? a.content.toString('base64') : a.content,
+    }));
+  }
+
+  const body = JSON.stringify(payload);
 
   const req = https.request({
     hostname: 'api.brevo.com',
@@ -46,7 +55,7 @@ let transporter;
 
 if (useBrevo) {
   transporter = {
-    sendMail: ({ from, to, subject, html }) => sendViaBrevo(from, to, subject, html),
+    sendMail: ({ from, to, subject, html, attachments }) => sendViaBrevo(from, to, subject, html, attachments),
     verify:   (cb) => cb(null),
   };
   console.log('✅ Mailer ready — provider: Brevo (HTTP API)');

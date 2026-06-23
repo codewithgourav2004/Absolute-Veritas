@@ -52,8 +52,11 @@ app.use('/api/news',        cachePublic(300), require('./routes/news'));
 app.use('/api/newsletters', cachePublic(600), require('./routes/newsletters'));
 app.use('/api/subscribers', require('./routes/subscribers'));
 
-// Uploaded images — long cache since filenames are unique
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+// Uploaded files — long cache; override Helmet's CORP so cross-origin pages can load images/PDFs
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
   maxAge: '1y',
   immutable: true,
 }));

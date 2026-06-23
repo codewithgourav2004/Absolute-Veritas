@@ -18,6 +18,7 @@ client/build/
 # Uploaded files
 server/uploads/*
 !server/uploads/.gitkeep
+!server/uploads/*absolute-veritas.pdf
 
 # Logs
 npm-debug.log*

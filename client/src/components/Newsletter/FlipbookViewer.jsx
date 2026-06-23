@@ -6,17 +6,19 @@ import 'react-pdf/dist/Page/TextLayer.css';
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const API_BASE = (process.env.REACT_APP_API_URL || '/api').replace(/\/$/, '');
+// Strip the trailing /api to get the server root (empty string in dev, full URL in prod)
+const SERVER_BASE = API_BASE.replace(/\/api$/, '');
 
 const toProxyUrl = (url) => {
   if (!url) return '';
-  if (url.startsWith('/')) return url;
-  if (url.includes('cloudinary.com')) return url;
+  // Always proxy through backend so PDF.js never makes a cross-origin fetch
+  // (Cloudinary raw files can block inline loading depending on CORS config)
   return `${API_BASE}/download?url=${encodeURIComponent(url)}&inline=1`;
 };
 
 const toDownloadUrl = (url) => {
   if (!url) return '#';
-  if (url.startsWith('/')) return url;
+  if (url.startsWith('/')) return `${SERVER_BASE}${url}`;
   return `${API_BASE}/download?url=${encodeURIComponent(url)}`;
 };
 

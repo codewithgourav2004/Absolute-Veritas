@@ -1,6 +1,7 @@
 const express = require('express');
 const https   = require('https');
 const http    = require('http');
+const path    = require('path');
 const router  = express.Router();
 
 const BROWSER_HEADERS = {
@@ -55,9 +56,20 @@ router.get('/', async (req, res) => {
 
   if (!url) return res.status(400).json({ message: 'url param required' });
 
-  // For local /uploads/ paths just redirect — no proxy needed
-  if (url.startsWith('/')) {
-    return res.redirect(url);
+  // For local /uploads/ paths, serve directly with explicit CORS headers (redirect
+  // would loop back to the CORP-blocked static route when accessed cross-origin)
+  if (url.startsWith('/uploads/')) {
+    const filePath = path.resolve(__dirname, '..', url.replace(/^\//, ''));
+    const filename = url.split('/').pop();
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Content-Type', 'application/pdf');
+    if (inline !== '1') {
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    }
+    return res.sendFile(filePath, (err) => {
+      if (err && !res.headersSent) res.status(404).json({ message: 'File not found' });
+    });
   }
 
   try {

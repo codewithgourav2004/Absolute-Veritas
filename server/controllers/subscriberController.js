@@ -57,16 +57,37 @@ const welcomeEmail = (nameOrEmail) => base(`
     <a href="mailto:${process.env.EMAIL_USER}">${process.env.EMAIL_USER}</a>
   </div>`);
 
+const customEmail = (subject, bodyHtml, unsubUrl) => base(`
+  <div class="hdr">
+    <div class="hdr-logo"><span class="hdr-dot"></span><h1>Absolute Veritas</h1><span class="hdr-dot"></span></div>
+    <p>TIC &amp; IT Compliance Consultancy</p>
+  </div>
+  <div class="body">
+    <h2 class="nl-title">${subject}</h2>
+    <div style="font-size:15px;line-height:1.75;color:#444">${bodyHtml}</div>
+  </div>
+  <div class="ftr">
+    &copy; ${new Date().getFullYear()} Absolute Veritas &nbsp;|&nbsp;
+    <a href="mailto:${process.env.EMAIL_FROM || process.env.EMAIL_USER}">${process.env.EMAIL_FROM || process.env.EMAIL_USER}</a>
+    <div class="unsub">You're receiving this because you subscribed to Absolute Veritas updates. &nbsp;
+      <a href="${unsubUrl}">Unsubscribe</a>
+    </div>
+  </div>`);
+
 const newsletterEmail = (nl, token, siteUrl) => {
   const readUrl   = `${siteUrl}/newsletter/${nl._id}`;
   const apiUrl    = (process.env.SERVER_URL || 'https://absolute-veritas.onrender.com').replace(/\/$/, '');
   const unsubUrl  = `${apiUrl}/api/subscribers/unsubscribe/${token}`;
   const coverHtml = nl.coverImage
-    ? `<img src="${nl.coverImage.startsWith('/') ? siteUrl + nl.coverImage : nl.coverImage}" alt="${nl.title}" class="nl-cover"/>`
+    ? `<img src="${nl.coverImage.startsWith('/') ? apiUrl + nl.coverImage : nl.coverImage}" alt="${nl.title}" class="nl-cover"/>`
     : '';
-  const pdfBtn    = nl.pdfLink
-    ? `<a href="${nl.pdfLink}" class="btn-outline">Download PDF</a>`
-    : '';
+  // Route PDF through the download proxy so it always triggers Save-As in the email client
+  const pdfBtn = (() => {
+    if (!nl.pdfLink) return '';
+    const fullUrl = nl.pdfLink.startsWith('/') ? `${apiUrl}${nl.pdfLink}` : nl.pdfLink;
+    const dlHref  = `${apiUrl}/api/download?url=${encodeURIComponent(fullUrl)}`;
+    return `<a href="${dlHref}" class="btn-outline">Download PDF</a>`;
+  })();
 
   return base(`
   <div class="hdr">
@@ -206,6 +227,60 @@ exports.broadcastNewsletter = async (nl) => {
     }
   }
   return { sent, failed };
+};
+
+exports.sendCustomEmail = async (req, res) => {
+  try {
+    const { subject, body, recipientIds } = req.body;
+    if (!subject || !subject.trim()) return res.status(400).json({ message: 'Subject is required.' });
+    if (!body    || !body.trim())    return res.status(400).json({ message: 'Body is required.' });
+
+    let ids;
+    try { ids = recipientIds ? JSON.parse(recipientIds) : 'all'; } catch { ids = 'all'; }
+
+    const filter = ids === 'all' ? { isActive: true } : { _id: { $in: ids }, isActive: true };
+    const subscribers = await Subscriber.find(filter);
+    if (!subscribers.length) return res.status(400).json({ message: 'No active subscribers match the selection.' });
+
+    const apiUrl  = (process.env.SERVER_URL || 'https://absolute-veritas.onrender.com').replace(/\/$/, '');
+    const attachments = (req.files || []).map((f) => ({
+      filename:    f.originalname,
+      content:     f.buffer,
+      contentType: f.mimetype,
+    }));
+
+    // Paragraph-wrap plain-text lines (if no HTML tags detected)
+    const hasHtml = /<[a-z][\s\S]*>/i.test(body);
+    const bodyHtml = hasHtml
+      ? body
+      : body.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`).join('');
+
+    let sent = 0, failed = 0;
+    for (const sub of subscribers) {
+      const unsubUrl = `${apiUrl}/api/subscribers/unsubscribe/${sub.unsubscribeToken}`;
+      try {
+        await transporter.sendMail({
+          from:        `"Absolute Veritas" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+          to:          sub.email,
+          subject:     subject.trim(),
+          html:        customEmail(subject.trim(), bodyHtml, unsubUrl),
+          attachments,
+        });
+        sent++;
+      } catch (e) {
+        console.error(`Custom email failed for ${sub.email}:`, e.message);
+        failed++;
+      }
+    }
+
+    res.json({
+      message: `Sent to ${sent} subscriber${sent !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}.`,
+      sent,
+      failed,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 exports.sendNewsletter = async (req, res) => {

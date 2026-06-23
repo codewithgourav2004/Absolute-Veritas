@@ -5,7 +5,8 @@ exports.getBlogs = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 9;
-    const filter = { isPublished: true };
+    const isAdmin = Boolean(req.headers.authorization);
+    const filter = isAdmin ? {} : { isPublished: true };
     if (req.query.category) filter.category = req.query.category;
     const total = await Blog.countDocuments(filter);
     const blogs = await Blog.find(filter)
@@ -21,7 +22,9 @@ exports.getBlogs = async (req, res) => {
 
 exports.getBlogBySlug = async (req, res) => {
   try {
-    const blog = await Blog.findOne({ slug: req.params.slug, isPublished: true });
+    const isAdmin = Boolean(req.headers.authorization);
+    const filter = isAdmin ? { slug: req.params.slug } : { slug: req.params.slug, isPublished: true };
+    const blog = await Blog.findOne(filter);
     if (!blog) return res.status(404).json({ message: 'Blog not found' });
     res.json(blog);
   } catch (err) {

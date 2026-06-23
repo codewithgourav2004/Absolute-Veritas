@@ -330,6 +330,7 @@ const AdminNewsPage = () => {
       <Helmet><title>Admin — News | Absolute Veritas</title></Helmet>
       <AdminLayout
         title={view === 'list' ? 'News & Updates' : undefined}
+        back={view !== 'list' ? closeForm : undefined}
         action={
           view === 'list' ? (
             <button onClick={() => setView('new')} className="btn-primary px-6 py-2.5 text-sm">

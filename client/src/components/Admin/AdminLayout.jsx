@@ -69,9 +69,18 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    label: 'Send Email',
+    path: '/admin/email',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+      </svg>
+    ),
+  },
 ];
 
-const AdminLayout = ({ children, title, action }) => {
+const AdminLayout = ({ children, title, action, back }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -165,6 +174,17 @@ const AdminLayout = ({ children, title, action }) => {
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            {back && (
+              <button
+                onClick={back}
+                className="inline-flex items-center gap-1.5 text-steel hover:text-indigo text-sm font-semibold mb-6 transition-colors group"
+              >
+                <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to list
+              </button>
+            )}
             {(title || action) && (
               <div className="flex items-center justify-between mb-7">
                 {title && (

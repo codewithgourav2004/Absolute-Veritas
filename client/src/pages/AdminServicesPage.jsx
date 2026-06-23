@@ -557,6 +557,7 @@ const AdminServicesPage = () => {
       <Helmet><title>Admin — Services | Absolute Veritas</title></Helmet>
       <AdminLayout
         title={view === 'list' ? 'Services' : undefined}
+        back={view !== 'list' ? closeForm : undefined}
         action={
           view === 'list' ? (
             <div className="flex items-center gap-3">

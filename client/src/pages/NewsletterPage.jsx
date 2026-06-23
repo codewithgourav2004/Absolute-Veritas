@@ -36,18 +36,19 @@ const NewsletterCard = ({ newsletter, onOpenFlipbook }) => {
       onClick={handleClick}
       className="group flex flex-col bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 cursor-pointer"
     >
-      {/* Cover image */}
-      <div className="relative h-52 w-full overflow-hidden bg-indigo flex-shrink-0">
+      {/* Cover image — portrait ratio fits PDF covers without cropping */}
+      <div className="relative w-full flex-shrink-0 overflow-hidden border-b border-gray-100"
+           style={{ aspectRatio: '3/4' }}>
         {hasImage ? (
           <img
             src={normalizeImg(newsletter.coverImage)}
             alt={newsletter.title}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-contain object-center bg-[#f8f7f4] transition-opacity duration-300 group-hover:opacity-90"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <div className="absolute inset-0 bg-indigo flex flex-col items-center justify-center gap-3 px-6 text-center">
             <div className="w-10 h-0.5 bg-gold mb-1" />
             <span className="font-display font-black text-white text-xl leading-tight line-clamp-2">
               {newsletter.title}

@@ -920,8 +920,7 @@ const AdminNewsletterPage = () => {
     <>
       <Helmet><title>Admin — Newsletters &amp; News | Absolute Veritas</title></Helmet>
       <AdminLayout
-        title={!isFormView ? undefined : undefined}
-        action={null}
+        back={isFormView ? closeForm : undefined}
       >
         {/* Tab bar */}
         {!isFormView && (

@@ -324,6 +324,7 @@ const AdminBlogPage = () => {
       <Helmet><title>Admin — Blog | Absolute Veritas</title></Helmet>
       <AdminLayout
         title={view === 'list' ? 'Blog Posts' : undefined}
+        back={view !== 'list' ? closeForm : undefined}
         action={
           view === 'list' ? (
             <button onClick={() => setView('new')} className="btn-primary px-6 py-2.5 text-sm">
