@@ -59,7 +59,8 @@ const welcomeEmail = (nameOrEmail) => base(`
 
 const newsletterEmail = (nl, token, siteUrl) => {
   const readUrl   = `${siteUrl}/newsletter/${nl._id}`;
-  const unsubUrl  = `${siteUrl.replace(/\/$/, '')}/api/subscribers/unsubscribe/${token}`;
+  const apiUrl    = (process.env.SERVER_URL || 'https://absolute-veritas.onrender.com').replace(/\/$/, '');
+  const unsubUrl  = `${apiUrl}/api/subscribers/unsubscribe/${token}`;
   const coverHtml = nl.coverImage
     ? `<img src="${nl.coverImage.startsWith('/') ? siteUrl + nl.coverImage : nl.coverImage}" alt="${nl.title}" class="nl-cover"/>`
     : '';
