@@ -62,7 +62,8 @@ app.use('/uploads', (req, res, next) => {
 }));
 
 app.use('/api/upload',    require('./routes/upload'));
-app.use('/api/download', require('./routes/download'));
+// Download proxy must allow any origin — react-pdf fetches PDFs cross-origin from Netlify
+app.use('/api/download', cors({ origin: '*' }), require('./routes/download'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
