@@ -5,17 +5,19 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
+const API_BASE = (process.env.REACT_APP_API_URL || '/api').replace(/\/$/, '');
+
 const toProxyUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('/')) return url;
   if (url.includes('cloudinary.com')) return url;
-  return `/api/download?url=${encodeURIComponent(url)}&inline=1`;
+  return `${API_BASE}/download?url=${encodeURIComponent(url)}&inline=1`;
 };
 
 const toDownloadUrl = (url) => {
   if (!url) return '#';
   if (url.startsWith('/')) return url;
-  return `/api/download?url=${encodeURIComponent(url)}`;
+  return `${API_BASE}/download?url=${encodeURIComponent(url)}`;
 };
 
 const PageSkeleton = ({ width, height }) => (
