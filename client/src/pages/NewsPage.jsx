@@ -5,6 +5,7 @@ import { useQuery } from 'react-query';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import Loader from '../components/Common/Loader';
+import normalizeImg from '../utils/normalizeImg';
 
 const NEWS_CATEGORIES = ['All', 'Trending', 'BIS', 'WPC', 'TEC', 'CDSCO', 'EPR', 'FSSAI', 'CE', 'FCC', 'IT Compliance', 'General'];
 
@@ -19,11 +20,6 @@ const CATEGORY_COLORS = {
   FCC:            'bg-violet-100 text-violet-700',
   'IT Compliance':'bg-pink-100 text-pink-700',
   General:        'bg-gray-100 text-gray-600',
-};
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
 };
 
 // ── Featured card (large horizontal) ─────────────────────────────────────────

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import api from '../../utils/api';
 import { formatDate } from '../../utils/helpers';
+import normalizeImg from '../../utils/normalizeImg';
 
 const CATEGORY_COLORS = {
   BIS:            'bg-blue-100 text-blue-700',
@@ -15,11 +16,6 @@ const CATEGORY_COLORS = {
   FCC:            'bg-violet-100 text-violet-700',
   'IT Compliance':'bg-pink-100 text-pink-700',
   General:        'bg-gray-100 text-gray-600',
-};
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
 };
 
 const TrendingNewsSection = () => {

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import AdminLayout from '../components/Admin/AdminLayout';
 import { SERVICE_CATEGORIES } from '../utils/constants';
+import normalizeImg from '../utils/normalizeImg';
 
 const CAT_COLORS = {
   'Certification':  'bg-blue-50 text-blue-700',
@@ -21,8 +22,6 @@ const toHtml = (text) =>
     .filter(Boolean)
     .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
     .join('\n');
-
-const normalizeImg = (url) => url?.replace(/^https?:\/\/localhost:\d+/, '') || '';
 
 // ── Service form ──────────────────────────────────────────────────────────────
 // Wraps an HTML fragment in a full document for the preview iframe

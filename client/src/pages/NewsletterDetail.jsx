@@ -5,11 +5,7 @@ import { useQuery } from 'react-query';
 import api from '../utils/api';
 import Loader from '../components/Common/Loader';
 import FlipbookViewer from '../components/Newsletter/FlipbookViewer';
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
-};
+import normalizeImg from '../utils/normalizeImg';
 
 // For same-origin paths the browser handles download fine.
 // For external URLs we route through our server proxy so the browser

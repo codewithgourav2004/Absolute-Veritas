@@ -5,11 +5,7 @@ import { useQuery } from 'react-query';
 import api from '../utils/api';
 import Loader from '../components/Common/Loader';
 import FlipbookViewer from '../components/Newsletter/FlipbookViewer';
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
-};
+import normalizeImg from '../utils/normalizeImg';
 
 const MONTH_IDX = {
   January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate, truncate } from '../../utils/helpers';
-
-const normalizeImg = (url) => url ? url.replace(/^https?:\/\/localhost:\d+/, '') : null;
+import normalizeImg from '../../utils/normalizeImg';
 
 const CATEGORY_COLORS = {
   Certification: 'bg-crimson/15 text-crimson border-crimson/25',

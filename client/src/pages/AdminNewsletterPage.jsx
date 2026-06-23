@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import AdminLayout from '../components/Admin/AdminLayout';
+import normalizeImg from '../utils/normalizeImg';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -13,11 +14,6 @@ const MONTHS = [
 ];
 
 const NEWS_CATEGORIES = ['General', 'BIS', 'WPC', 'TEC', 'CDSCO', 'EPR', 'FSSAI', 'CE', 'FCC', 'IT Compliance'];
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
-};
 
 const toHtml = (text) =>
   text

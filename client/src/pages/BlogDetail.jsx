@@ -4,11 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useFetch } from '../hooks/useFetch';
 import Loader from '../components/Common/Loader';
 import { formatDate } from '../utils/helpers';
-
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
-};
+import normalizeImg from '../utils/normalizeImg';
 
 const readingTime = (html) => {
   if (!html) return 1;

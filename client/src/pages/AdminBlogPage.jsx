@@ -5,15 +5,11 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import AdminLayout from '../components/Admin/AdminLayout';
+import normalizeImg from '../utils/normalizeImg';
 
 const BLOG_CATEGORIES = ['Certification', 'Testing', 'Compliance', 'Industry News', 'General'];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-const normalizeImg = (url) => {
-  if (!url) return null;
-  return url.replace(/^https?:\/\/localhost:\d+/, '');
-};
-
 const toHtml = (text) =>
   text
     .split(/\n{2,}/)
