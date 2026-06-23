@@ -77,7 +77,13 @@ router.get('/', async (req, res) => {
 
     const ct = (response.headers['content-type'] || 'application/pdf').toLowerCase();
 
-    // If the remote returns HTML it's an error page — don't forward it
+    // Non-200 or HTML = error page — don't pipe garbage to react-pdf
+    if (response.statusCode !== 200) {
+      response.resume();
+      return res.status(502).json({
+        message: `PDF host returned HTTP ${response.statusCode}. The file may be private or the link expired.`,
+      });
+    }
     if (ct.includes('text/html')) {
       response.resume();
       return res.status(502).json({
