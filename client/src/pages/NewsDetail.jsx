@@ -1,10 +1,83 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useFetch } from '../hooks/useFetch';
 import Loader from '../components/Common/Loader';
 import { formatDate } from '../utils/helpers';
 import normalizeImg from '../utils/normalizeImg';
+
+const buildSrcDoc = (html) => {
+  const isFullDoc = /<!doctype|<html/i.test(html);
+  const resizeScript = `<script>
+(function(){
+  function report(){
+    var h = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    window.parent.postMessage({ _svcH: h }, '*');
+  }
+  window.addEventListener('load', report);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(report).observe(document.body);
+  setTimeout(report, 200);
+  setTimeout(report, 800);
+})();
+<\/script>`;
+  if (isFullDoc) {
+    return /(<\/body>)/i.test(html)
+      ? html.replace(/<\/body>/i, resizeScript + '</body>')
+      : html + resizeScript;
+  }
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; color: #374151; line-height: 1.7; }
+</style>
+</head>
+<body>
+${html}
+${resizeScript}
+</body>
+</html>`;
+};
+
+const SandboxedContent = ({ html }) => {
+  const [height, setHeight] = useState(600);
+  const iframeRef = useRef(null);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data && typeof e.data._svcH === 'number' && e.data._svcH > 0) {
+        setHeight(Math.max(e.data._svcH + 48, 300));
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [html]);
+
+  const handleLoad = () => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (doc) {
+        const h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
+        if (h > 50) setHeight(h + 48);
+      }
+    } catch {}
+  };
+
+  return (
+    <iframe
+      ref={iframeRef}
+      key={html}
+      srcDoc={buildSrcDoc(html)}
+      sandbox="allow-scripts allow-same-origin"
+      onLoad={handleLoad}
+      style={{ width: '100%', height, border: 'none', display: 'block', minHeight: 300 }}
+      title="Article Content"
+    />
+  );
+};
 
 const readingTime = (html) => {
   if (!html) return 1;
@@ -39,6 +112,8 @@ const NewsDetail = () => {
 
   const mins = readingTime(article.content);
   const categoryClass = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.General;
+  const isLiveContent = Boolean(article.content?.trim()) &&
+    /(<style|<script|<link|<div|<section|<header|<footer|<table|<form|class=|id=)/i.test(article.content);
 
   return (
     <>
@@ -149,10 +224,16 @@ const NewsDetail = () => {
             </p>
 
             {/* Body content */}
-            <div
-              className="blog-body"
-              dangerouslySetInnerHTML={{ __html: article.content }}
-            />
+            {isLiveContent ? (
+              <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                <SandboxedContent html={article.content} />
+              </div>
+            ) : (
+              <div
+                className="blog-body"
+                dangerouslySetInnerHTML={{ __html: article.content }}
+              />
+            )}
 
             {/* Footer */}
             <div className="mt-14 pt-8 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">

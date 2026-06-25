@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import AdminLayout from '../components/Admin/AdminLayout';
+import CodeEditor from '../components/Admin/CodeEditor';
 import normalizeImg from '../utils/normalizeImg';
 
 const MONTHS = [
@@ -14,6 +15,12 @@ const MONTHS = [
 ];
 
 const NEWS_CATEGORIES = ['General', 'BIS', 'WPC', 'TEC', 'CDSCO', 'EPR', 'FSSAI', 'CE', 'FCC', 'IT Compliance'];
+
+const buildPreviewSrc = (html) => {
+  const isFullDoc = /<!doctype|<html/i.test(html);
+  if (isFullDoc) return html;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:#374151;line-height:1.7;padding:16px}</style></head><body>${html}</body></html>`;
+};
 
 const toHtml = (text) =>
   text
@@ -140,11 +147,27 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
   const fileRef    = useRef(null);
   const pdfFileRef = useRef(null);
+  const nlHtmlRef  = useRef(null);
   const [preview,      setPreview]      = useState(initial?.coverImage || '');
   const [uploading,    setUploading]    = useState(false);
   const [uploadError,  setUploadError]  = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfUploadErr, setPdfUploadErr] = useState('');
+  const [nlContent,  setNlContent]  = useState(initial?.content || '');
+  const [nlCodeLang, setNlCodeLang] = useState('html');
+
+  const handleNlHtmlUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'css') setNlCodeLang('css');
+    else if (ext === 'js') setNlCodeLang('javascript');
+    else setNlCodeLang('html');
+    const reader = new FileReader();
+    reader.onload = (ev) => { setNlContent(ev.target.result); };
+    reader.readAsText(file);
+  };
 
   const {
     register,
@@ -159,7 +182,6 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       month:       initial?.month || 'January',
       year:        initial?.year || new Date().getFullYear(),
       excerpt:     initial?.excerpt || '',
-      content:     initial?.content || '',
       coverImage:  initial?.coverImage || '',
       pdfLink:     initial?.pdfLink || '',
       isPublished: initial?.isPublished ?? false,
@@ -208,7 +230,7 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       const payload = {
         ...data,
         year: parseInt(data.year, 10),
-        content: data.content ? (/<[a-z]/i.test(data.content) ? data.content : toHtml(data.content)) : '',
+        content: nlContent,
       };
       return initial
         ? api.put(`/newsletters/${initial._id}`, payload)
@@ -326,13 +348,26 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <label className="block text-sm font-medium text-indigo mb-1">Full Content</label>
-          <p className="text-xs text-steel mb-2">Write the newsletter article here. Double newline = new paragraph. Leave blank if PDF-only.</p>
-          <textarea
-            {...register('content')}
-            rows={14}
-            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y font-mono leading-relaxed"
-            placeholder="Write your newsletter content here...&#10;&#10;Start a new paragraph by leaving a blank line."
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <label className="block text-sm font-medium text-indigo">Full Content</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input ref={nlHtmlRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleNlHtmlUpload} />
+              <button type="button" onClick={() => nlHtmlRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload .html / .css / .js
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-steel mb-2">Leave blank if PDF-only.</p>
+          <CodeEditor
+            value={nlContent}
+            onChange={setNlContent}
+            language={nlCodeLang}
+            onLanguageChange={setNlCodeLang}
+            height={460}
           />
         </div>
 
@@ -431,10 +466,28 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
 // ── NewsArticleForm ───────────────────────────────────────────────────────────
 const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
-  const fileRef = useRef(null);
+  const fileRef   = useRef(null);
+  const naHtmlRef = useRef(null);
   const [preview, setPreview] = useState(initial?.coverImage || '');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [naContent,      setNaContent]      = useState(initial?.content || '');
+  const [naContentError, setNaContentError] = useState('');
+  const [naShowPreview,  setNaShowPreview]  = useState(false);
+  const [naCodeLang,     setNaCodeLang]     = useState('html');
+
+  const handleNaHtmlUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'css') setNaCodeLang('css');
+    else if (ext === 'js') setNaCodeLang('javascript');
+    else setNaCodeLang('html');
+    const reader = new FileReader();
+    reader.onload = (ev) => { setNaContent(ev.target.result); setNaShowPreview(false); setNaContentError(''); };
+    reader.readAsText(file);
+  };
 
   const {
     register,
@@ -446,7 +499,6 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
     defaultValues: {
       title:       initial?.title || '',
       excerpt:     initial?.excerpt || '',
-      content:     initial?.content || '',
       category:    initial?.category || 'General',
       tags:        initial?.tags?.join(', ') || '',
       author:      initial?.author || 'Absolute Veritas',
@@ -481,7 +533,7 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
       const payload = {
         ...data,
         tags:    data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        content: toHtml(data.content),
+        content: naContent,
       };
       return initial
         ? api.put(`/news/${initial._id}`, payload)
@@ -496,13 +548,19 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
     }
   );
 
+  const onFormSubmit = (data) => {
+    if (!naContent?.trim()) { setNaContentError('Content is required'); return; }
+    setNaContentError('');
+    saveMutation.mutate(data);
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8">
       <h2 className="font-display font-bold text-indigo text-2xl mb-6">
         {initial ? 'Edit News Article' : 'New News Article'}
       </h2>
 
-      <form onSubmit={handleSubmit((d) => saveMutation.mutate(d))} className="space-y-6">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         {/* Cover image */}
         <div>
           <label className="block text-sm font-medium text-indigo mb-2">Cover Image</label>
@@ -588,16 +646,54 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <label className="block text-sm font-medium text-indigo mb-1">
-            Content * <span className="text-steel font-normal">(separate paragraphs with a blank line)</span>
-          </label>
-          <textarea
-            {...register('content', { required: 'Content is required' })}
-            rows={12}
-            className={`w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y font-mono ${errors.content ? 'border-red-400' : 'border-gray-200'}`}
-            placeholder="Write your article content here. Leave a blank line between paragraphs..."
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <label className="block text-sm font-medium text-indigo">Content *</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input ref={naHtmlRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleNaHtmlUpload} />
+              <button type="button" onClick={() => naHtmlRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload .html / .css / .js
+              </button>
+              {naContent.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setNaShowPreview((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors"
+                >
+                  {naShowPreview ? '✕ Close Preview' : '▶ Preview'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <CodeEditor
+            value={naContent}
+            onChange={(v) => { setNaContent(v); setNaShowPreview(false); }}
+            language={naCodeLang}
+            onLanguageChange={setNaCodeLang}
+            height={460}
           />
-          {errors.content && <p className="text-crimson text-xs mt-1">{errors.content.message}</p>}
+
+          {naShowPreview && naContent.trim() && (
+            <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+              <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-green-700">Live Preview — sandboxed iframe</span>
+                <button type="button" onClick={() => setNaShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
+              </div>
+              <iframe
+                key={naContent}
+                srcDoc={buildPreviewSrc(naContent)}
+                sandbox="allow-scripts allow-same-origin"
+                className="w-full"
+                style={{ height: 500, border: 'none', display: 'block' }}
+                title="HTML Preview"
+              />
+            </div>
+          )}
+          {naContentError && <p className="text-crimson text-xs mt-1">{naContentError}</p>}
         </div>
 
         {/* Category + Author */}
@@ -996,9 +1092,9 @@ const AdminNewsletterPage = () => {
                     key={nl._id}
                     className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < newsletters.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                    <div className="w-24 h-16 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
                       {nl.coverImage ? (
-                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="absolute inset-0 w-full h-full object-cover" />
+                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60 flex items-center justify-center">
                           <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1136,7 +1232,7 @@ const AdminNewsletterPage = () => {
                     key={article._id}
                     className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < newsArticles.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="w-20 h-[52px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+                    <div className="w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                       {article.coverImage ? (
                         <img src={normalizeImg(article.coverImage)} alt={article.title} className="w-full h-full object-cover" />
                       ) : (

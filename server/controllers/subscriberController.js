@@ -1,5 +1,6 @@
 const Subscriber  = require('../models/Subscriber');
 const Newsletter  = require('../models/Newsletter');
+const EmailLog    = require('../models/EmailLog');
 const transporter = require('../config/mailer');
 
 // ── Email templates ───────────────────────────────────────────────────────────
@@ -264,6 +265,9 @@ exports.sendCustomEmail = async (req, res) => {
 
     let sent = 0, failed = 0;
 
+    const subjectTrimmed = subject.trim();
+    const logs = [];
+
     // Send to existing subscribers (with personal unsubscribe link)
     for (const sub of subscribers) {
       const unsubUrl = `${apiUrl}/api/subscribers/unsubscribe/${sub.unsubscribeToken}`;
@@ -271,14 +275,16 @@ exports.sendCustomEmail = async (req, res) => {
         await transporter.sendMail({
           from:        `"Absolute Veritas" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
           to:          sub.email,
-          subject:     subject.trim(),
-          html:        customEmail(subject.trim(), bodyHtml, unsubUrl),
+          subject:     subjectTrimmed,
+          html:        customEmail(subjectTrimmed, bodyHtml, unsubUrl),
           attachments,
         });
         sent++;
+        logs.push({ subject: subjectTrimmed, recipient: sub.email, status: 'delivered', source: 'custom' });
       } catch (e) {
         console.error(`Custom email failed for ${sub.email}:`, e.message);
         failed++;
+        logs.push({ subject: subjectTrimmed, recipient: sub.email, status: 'failed', error: e.message, source: 'custom' });
       }
     }
 
@@ -287,20 +293,15 @@ exports.sendCustomEmail = async (req, res) => {
       const email = (extra.email || '').trim().toLowerCase();
       if (!email) continue;
 
-      // Reuse existing subscriber token if they're already in DB
       let token = null;
       const existing = await Subscriber.findOne({ email });
       if (existing) {
         token = existing.unsubscribeToken;
       } else if (addToList === 'true') {
-        // Add to subscriber list before sending
         try {
-          const newSub = await Subscriber.create({
-            email,
-            name: (extra.name || '').trim(),
-          });
+          const newSub = await Subscriber.create({ email, name: (extra.name || '').trim() });
           token = newSub.unsubscribeToken;
-        } catch { /* duplicate — fetch it */
+        } catch {
           const found = await Subscriber.findOne({ email });
           token = found?.unsubscribeToken;
         }
@@ -314,22 +315,59 @@ exports.sendCustomEmail = async (req, res) => {
         await transporter.sendMail({
           from:        `"Absolute Veritas" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
           to:          email,
-          subject:     subject.trim(),
-          html:        customEmail(subject.trim(), bodyHtml, unsubUrl),
+          subject:     subjectTrimmed,
+          html:        customEmail(subjectTrimmed, bodyHtml, unsubUrl),
           attachments,
         });
         sent++;
+        logs.push({ subject: subjectTrimmed, recipient: email, status: 'delivered', source: 'custom' });
       } catch (e) {
         console.error(`Custom email failed for ${email}:`, e.message);
         failed++;
+        logs.push({ subject: subjectTrimmed, recipient: email, status: 'failed', error: e.message, source: 'custom' });
       }
     }
+
+    // Persist all logs in one batch (fire-and-forget — don't block the response)
+    if (logs.length) EmailLog.insertMany(logs).catch((e) => console.error('EmailLog save error:', e.message));
 
     res.json({
       message: `Sent to ${sent} recipient${sent !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}.`,
       sent,
       failed,
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteEmailLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id === 'all') {
+      const filter = req.query.status ? { status: req.query.status } : {};
+      const { deletedCount } = await EmailLog.deleteMany(filter);
+      return res.json({ message: `Deleted ${deletedCount} log${deletedCount !== 1 ? 's' : ''}.` });
+    }
+    await EmailLog.findByIdAndDelete(id);
+    res.json({ message: 'Log deleted.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getEmailLogs = async (req, res) => {
+  try {
+    const limit  = Math.min(parseInt(req.query.limit  || 100, 10), 500);
+    const page   = Math.max(parseInt(req.query.page   || 1,   10), 1);
+    const status = req.query.status; // 'delivered' | 'failed' | undefined = all
+    const filter = status ? { status } : {};
+
+    const [logs, total] = await Promise.all([
+      EmailLog.find(filter).sort({ sentAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      EmailLog.countDocuments(filter),
+    ]);
+    res.json({ logs, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -347,20 +385,27 @@ exports.sendNewsletter = async (req, res) => {
     const siteUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '');
 
     let sent = 0, failed = 0;
+    const nlLogs = [];
+    const nlSubject = `${nl.title} — Absolute Veritas ${nl.edition}`;
+
     for (const sub of subscribers) {
       try {
         await transporter.sendMail({
           from:    `"Absolute Veritas Newsletter" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
           to:      sub.email,
-          subject: `${nl.title} — Absolute Veritas ${nl.edition}`,
+          subject: nlSubject,
           html:    newsletterEmail(nl, sub.unsubscribeToken, siteUrl),
         });
         sent++;
+        nlLogs.push({ subject: nlSubject, recipient: sub.email, status: 'delivered', source: 'newsletter' });
       } catch (e) {
         console.error(`Failed to send to ${sub.email}:`, e.message);
         failed++;
+        nlLogs.push({ subject: nlSubject, recipient: sub.email, status: 'failed', error: e.message, source: 'newsletter' });
       }
     }
+
+    if (nlLogs.length) EmailLog.insertMany(nlLogs).catch((e) => console.error('EmailLog save error:', e.message));
 
     res.json({
       message: `Sent to ${sent} subscriber${sent !== 1 ? 's' : ''}${failed > 0 ? `, ${failed} failed` : ''}.`,

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import * as XLSX from 'xlsx';
 import api from '../utils/api';
 import AdminLayout from '../components/Admin/AdminLayout';
@@ -93,12 +93,42 @@ const AdminEmailPage = () => {
   const [error,       setError]       = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const qc = useQueryClient();
+
   // ── fetch existing subscribers ──────────────────────────────────────────────
   const { data: subscribers = [], isLoading } = useQuery(
     'email-subscribers',
     () => api.get('/subscribers').then((r) => r.data),
     { staleTime: 60000 }
   );
+
+  // ── fetch email logs ────────────────────────────────────────────────────────
+  const [logStatus,   setLogStatus]   = useState('');  // '' | 'delivered' | 'failed'
+  const [deletingLog, setDeletingLog] = useState(null); // id being deleted
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery(
+    ['email-logs', logStatus],
+    () => api.get(`/subscribers/email-logs${logStatus ? `?status=${logStatus}` : ''}`).then((r) => r.data),
+    { staleTime: 0 }
+  );
+
+  const handleDeleteLog = async (id) => {
+    setDeletingLog(id);
+    try {
+      await api.delete(`/subscribers/email-logs/${id}`);
+      qc.invalidateQueries('email-logs');
+    } finally {
+      setDeletingLog(null);
+    }
+  };
+
+  const handleClearAll = async () => {
+    setClearConfirm(false);
+    try {
+      await api.delete(`/subscribers/email-logs/all${logStatus ? `?status=${logStatus}` : ''}`);
+      qc.invalidateQueries('email-logs');
+    } catch { /* silent */ }
+  };
 
   const active   = subscribers.filter((s) => s.isActive);
   const filtered = active.filter((s) =>
@@ -208,6 +238,7 @@ const AdminEmailPage = () => {
         headers: { 'Content-Type': undefined },
       });
       setResult(res.data);
+      qc.invalidateQueries('email-logs');
     } catch (err) {
       setError(err.response?.data?.message || 'Send failed. Please try again.');
     } finally {
@@ -479,6 +510,135 @@ const AdminEmailPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── Email Delivery Logs ───────────────────────────────────────────── */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <h2 className="font-display font-bold text-indigo text-xl">Email Delivery Logs</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              {['', 'delivered', 'failed'].map((s) => (
+                <button key={s} onClick={() => setLogStatus(s)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                    logStatus === s
+                      ? s === 'failed' ? 'bg-red-600 text-white border-red-600'
+                      : s === 'delivered' ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-indigo text-white border-indigo'
+                      : 'text-steel border-gray-200 hover:border-indigo hover:text-indigo'
+                  }`}>
+                  {s === '' ? 'All' : s === 'delivered' ? 'Delivered' : 'Failed'}
+                </button>
+              ))}
+              <button onClick={() => refetchLogs()}
+                className="text-xs text-steel hover:text-indigo border border-gray-200 px-3 py-1.5 rounded-full transition-colors font-semibold">
+                ↻ Refresh
+              </button>
+              {logsData?.total > 0 && (
+                <button onClick={() => setClearConfirm(true)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full border border-crimson/40 text-crimson hover:bg-crimson hover:text-white transition-colors">
+                  🗑 Clear {logStatus ? (logStatus === 'delivered' ? 'Delivered' : 'Failed') : 'All'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Clear-all confirm */}
+          {clearConfirm && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+              <p className="text-sm text-crimson font-medium">
+                Delete all {logStatus || ''} logs? This cannot be undone.
+              </p>
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={handleClearAll} className="text-xs font-bold px-4 py-2 bg-crimson text-white rounded-lg hover:bg-crimson/90 transition-colors">
+                  Yes, Delete
+                </button>
+                <button onClick={() => setClearConfirm(false)} className="text-xs font-semibold px-4 py-2 border border-gray-200 rounded-lg text-steel hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {logsLoading ? (
+            <p className="text-sm text-steel text-center py-10">Loading logs…</p>
+          ) : !logsData?.logs?.length ? (
+            <div className="bg-white rounded-2xl border border-gray-200 px-6 py-12 text-center">
+              <p className="text-steel text-sm">No email logs yet. Logs appear here after emails are sent.</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
+                <span className="text-xs font-semibold text-steel">{logsData.total} record{logsData.total !== 1 ? 's' : ''}</span>
+                <div className="flex gap-4 text-xs font-semibold">
+                  <span className="text-green-700">{logsData.logs.filter(l => l.status === 'delivered').length} delivered</span>
+                  <span className="text-crimson">{logsData.logs.filter(l => l.status === 'failed').length} failed</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b border-gray-100">
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Status</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Recipient</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Subject</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Source</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Sent At</th>
+                      <th className="px-5 py-3 text-xs font-semibold text-steel uppercase tracking-wide">Error</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logsData.logs.map((log) => (
+                      <tr key={log._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                            log.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-crimson'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${log.status === 'delivered' ? 'bg-green-500' : 'bg-crimson'}`} />
+                            {log.status === 'delivered' ? 'Delivered' : 'Failed'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-indigo font-medium max-w-[180px] truncate">{log.recipient}</td>
+                        <td className="px-5 py-3 text-steel max-w-[220px] truncate" title={log.subject}>{log.subject}</td>
+                        <td className="px-5 py-3">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                            log.source === 'newsletter' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-steel'
+                          }`}>
+                            {log.source === 'newsletter' ? 'Newsletter' : 'Custom'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-steel text-xs whitespace-nowrap">
+                          {new Date(log.sentAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-crimson max-w-[160px] truncate" title={log.error || ''}>
+                          {log.error || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleDeleteLog(log._id)}
+                            disabled={deletingLog === log._id}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-crimson transition-all disabled:opacity-40"
+                            title="Delete this log"
+                          >
+                            {deletingLog === log._id ? (
+                              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                              </svg>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Confirm modal ──────────────────────────────────────────────────── */}

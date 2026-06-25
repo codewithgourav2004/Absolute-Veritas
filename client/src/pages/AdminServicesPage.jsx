@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import AdminLayout from '../components/Admin/AdminLayout';
+import CodeEditor from '../components/Admin/CodeEditor';
 import { SERVICE_CATEGORIES } from '../utils/constants';
 import normalizeImg from '../utils/normalizeImg';
 
@@ -14,14 +15,6 @@ const CAT_COLORS = {
   'IT Compliance':  'bg-green-50 text-green-700',
   'Others':         'bg-gray-100 text-gray-600',
 };
-
-const toHtml = (text) =>
-  text
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
-    .join('\n');
 
 // ── Service form ──────────────────────────────────────────────────────────────
 // Wraps an HTML fragment in a full document for the preview iframe
@@ -42,20 +35,32 @@ const buildPreviewSrc = (html) => {
 
 const ServiceForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
-  const fileRef = useRef(null);
+  const fileRef    = useRef(null);
+  const htmlFileRef = useRef(null);
   const [features,    setFeatures]    = useState(initial?.features?.length ? initial.features : ['']);
   const [imageUrl,    setImageUrl]    = useState(normalizeImg(initial?.image));
   const [uploading,   setUploading]   = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [isDragOver,  setIsDragOver]  = useState(false);
-  const [htmlMode,    setHtmlMode]    = useState(
-    Boolean(initial?.content && /(<p>|<h[1-6]|<script|<style|<!doctype)/i.test(initial.content))
-  );
-  const [previewSrc,  setPreviewSrc]  = useState('');
+  const [content,     setContent]     = useState(initial?.content || '');
+  const [codeLanguage, setCodeLanguage] = useState('html');
   const [showPreview, setShowPreview] = useState(false);
   const abortRef = useRef(null);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const handleHtmlFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'css') setCodeLanguage('css');
+    else if (ext === 'js') setCodeLanguage('javascript');
+    else setCodeLanguage('html');
+    const reader = new FileReader();
+    reader.onload = (ev) => { setContent(ev.target.result); setShowPreview(false); };
+    reader.readAsText(file);
+  };
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
       name:                   initial?.name                   || '',
       category:               initial?.category               || 'Certification',
@@ -67,7 +72,6 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
       icon:                   initial?.icon                   || '',
       order:                  initial?.order                  ?? 0,
       isActive:               initial?.isActive               ?? true,
-      content:                initial?.content                || '',
     },
   });
 
@@ -119,12 +123,11 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
 
   const saveMutation = useMutation(
     (data) => {
-      const rawContent = data.content || '';
       const payload = {
         ...data,
         image:    imageUrl,
         features: features.filter(Boolean),
-        content:  htmlMode ? rawContent : (rawContent ? toHtml(rawContent) : ''),
+        content,
       };
       return initial
         ? api.put(`/services/${initial._id}`, payload)
@@ -373,67 +376,52 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
 
         {/* ── Full Content ── */}
         <div>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
             <label className="block text-sm font-medium text-indigo">
               Full Content <span className="text-steel font-normal">(optional — shown on service detail page)</span>
             </label>
-            <div className="flex items-center gap-2">
-              {htmlMode && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input ref={htmlFileRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleHtmlFileUpload} />
+              <button type="button" onClick={() => htmlFileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload .html / .css / .js
+              </button>
+              {content.trim() && (
                 <button
                   type="button"
-                  onClick={() => {
-                    const val = watch('content');
-                    setPreviewSrc(buildPreviewSrc(val));
-                    setShowPreview((s) => !s);
-                  }}
-                  className="text-xs px-3 py-1 rounded-full border border-crimson/40 text-crimson hover:bg-crimson/5 transition-colors font-semibold"
+                  onClick={() => setShowPreview((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors"
                 >
-                  {showPreview ? 'Hide Preview' : '▶ Preview'}
+                  {showPreview ? '✕ Close Preview' : '▶ Preview'}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => { setHtmlMode((m) => !m); setShowPreview(false); }}
-                className={`text-xs font-mono px-3 py-1 rounded-full border transition-colors ${htmlMode ? 'bg-indigo text-white border-indigo' : 'text-steel border-gray-300 hover:border-indigo hover:text-indigo'}`}
-              >
-                {htmlMode ? '</> HTML / JS / CSS' : 'Plain text'}
-              </button>
             </div>
           </div>
-          <p className="text-xs text-steel mb-2">
-            {htmlMode
-              ? 'Write full HTML + CSS + JS. Supports <style>, <script>, and any HTML — it runs inside a sandboxed iframe on the website.'
-              : 'Write plain text. Each blank line becomes a new paragraph. No HTML needed.'}
-          </p>
-          <textarea
-            {...register('content')}
-            rows={16}
-            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y leading-relaxed"
-            style={{ fontFamily: htmlMode ? 'JetBrains Mono, Consolas, monospace' : 'inherit' }}
-            placeholder={htmlMode
-              ? `<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { font-family: sans-serif; padding: 2rem; }\n  .card { background: #f9fafb; border-radius: 1rem; padding: 1.5rem; }\n</style>\n</head>\n<body>\n  <div class="card">\n    <h2>BIS Certification</h2>\n    <p>Detailed content goes here...</p>\n  </div>\n  <script>\n    console.log("JS works!");\n  <\/script>\n</body>\n</html>`
-              : 'Write a detailed overview of this service...\n\nExplain the process, eligibility, documents required, timelines, etc.\n\nEach blank line becomes a new paragraph.'}
+
+          <CodeEditor
+            value={content}
+            onChange={(v) => { setContent(v); setShowPreview(false); }}
+            language={codeLanguage}
+            onLanguageChange={setCodeLanguage}
+            height={500}
           />
 
-          {/* ── Live Preview ── */}
-          {htmlMode && showPreview && previewSrc && (
-            <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-                <span className="text-xs font-mono text-steel">Preview — runs in sandboxed iframe</span>
-                <button
-                  type="button"
-                  onClick={() => { setPreviewSrc(buildPreviewSrc(watch('content'))); }}
-                  className="text-xs text-crimson font-semibold hover:underline"
-                >
-                  Refresh
-                </button>
+          {showPreview && content.trim() && (
+            <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+              <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-green-700">Live Preview — sandboxed iframe</span>
+                <button type="button" onClick={() => setShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
               </div>
               <iframe
-                key={previewSrc}
-                srcDoc={previewSrc}
-                sandbox="allow-scripts"
-                style={{ width: '100%', height: 420, border: 'none', display: 'block', background: 'white' }}
-                title="Content preview"
+                key={content}
+                srcDoc={buildPreviewSrc(content)}
+                sandbox="allow-scripts allow-same-origin"
+                className="w-full"
+                style={{ height: 500, border: 'none', display: 'block' }}
+                title="HTML Preview"
               />
             </div>
           )}

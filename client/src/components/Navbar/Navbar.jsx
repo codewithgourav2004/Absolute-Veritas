@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { NAV_LINKS } from '../../utils/constants';
 import MobileMenu from './MobileMenu';
 import api from '../../utils/api';
 
-// ── Compact subscribe modal ───────────────────────────────────────────────────
-const SubscribeModal = ({ onClose }) => {
+const KNOWLEDGE_PATHS = ['/news', '/newsletter', '/blog'];
+const SESSION_KEY = 'av_subscribe_shown';
+
+// ── Subscribe popup (auto-triggered on Knowledge pages) ───────────────────────
+const SubscribePopup = ({ onClose }) => {
   const [name,    setName]    = useState('');
   const [mobile,  setMobile]  = useState('');
   const [email,   setEmail]   = useState('');
@@ -35,7 +38,6 @@ const SubscribeModal = ({ onClose }) => {
         className="relative bg-indigo rounded-2xl shadow-2xl w-full max-w-md p-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
@@ -52,7 +54,7 @@ const SubscribeModal = ({ onClose }) => {
           Get Compliance Updates in Your Inbox
         </h2>
         <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-          Monthly bulletins on BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC, and IT Compliance.
+          Monthly bulletins on BIS, WPC, TEC, CDSCO, EPR, FSSAI, CE, FCC, and IT Compliance — delivered straight to your email.
         </p>
 
         {status === 'success' ? (
@@ -110,11 +112,13 @@ const SubscribeModal = ({ onClose }) => {
   );
 };
 
+// ── Navbar ────────────────────────────────────────────────────────────────────
 const Navbar = () => {
-  const [scrolled,       setScrolled]       = useState(false);
-  const [mobileOpen,     setMobileOpen]     = useState(false);
-  const [openMenu,       setOpenMenu]       = useState(null);
-  const [subscribeOpen,  setSubscribeOpen]  = useState(false);
+  const [scrolled,      setScrolled]      = useState(false);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [openMenu,      setOpenMenu]      = useState(null);
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -122,101 +126,104 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  // Auto-show popup once per session when visiting any Knowledge page
+  useEffect(() => {
+    const isKnowledgePage = KNOWLEDGE_PATHS.some((p) => location.pathname.startsWith(p));
+    if (!isKnowledgePage) return;
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    const timer = setTimeout(() => {
+      setSubscribeOpen(true);
+      sessionStorage.setItem(SESSION_KEY, '1');
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  const handleClose = () => setSubscribeOpen(false);
+
   return (
     <>
-    <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-indigo shadow-xl' : 'bg-indigo/95'}`}>
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-display font-bold text-xl text-white">
-            Absolute <span className="text-crimson">Veritas</span>
-          </span>
-        </Link>
+      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-indigo shadow-xl' : 'bg-indigo/95'}`}>
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="font-display font-bold text-xl text-white">
+              Absolute <span className="text-crimson">Veritas</span>
+            </span>
+          </Link>
 
-        <ul className="hidden lg:flex items-center gap-8">
-          {NAV_LINKS.map((link) =>
-            link.children ? (
-              <li
-                key={link.label}
-                className="relative"
-                onMouseEnter={() => setOpenMenu(link.label)}
-                onMouseLeave={() => setOpenMenu(null)}
-              >
-                <button className="text-white/90 hover:text-white font-medium flex items-center gap-1 py-4">
-                  {link.label} <span className="text-xs">▾</span>
-                </button>
-
-                <div className={`absolute top-full left-0 mt-0 bg-white rounded-lg shadow-2xl py-2 w-52 transition-all duration-200 ${
-                  openMenu === link.label ? 'opacity-100 visible' : 'opacity-0 invisible'
-                }`}>
-                  {link.children.map((child) => (
-                    <Link
-                      key={child.label}
-                      to={child.path}
-                      onClick={() => setOpenMenu(null)}
-                      className="block px-4 py-2 text-indigo hover:bg-pearl hover:text-crimson font-medium text-sm"
-                    >
-                      {child.label}
-                    </Link>
-                  ))}
-                  {/* "All Services" footer only for Services dropdown */}
-                  {link.label === 'Services' && (
-                    <Link
-                      to="/services"
-                      onClick={() => setOpenMenu(null)}
-                      className="block px-4 py-2 text-crimson font-semibold text-sm border-t mt-1"
-                    >
-                      All Services →
-                    </Link>
-                  )}
-                  {/* Subscribe CTA for Knowledge dropdown */}
-                  {link.label === 'Knowledge' && (
-                    <button
-                      onClick={() => { setOpenMenu(null); setSubscribeOpen(true); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-crimson font-semibold text-sm border-t mt-1 hover:bg-red-50 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      Subscribe to Newsletter
-                    </button>
-                  )}
-                </div>
-              </li>
-            ) : (
-              <li key={link.label}>
-                <NavLink
-                  to={link.path}
-                  className={({ isActive }) =>
-                    `font-medium transition-colors ${isActive ? 'text-gold' : 'text-white/90 hover:text-white'}`
-                  }
+          <ul className="hidden lg:flex items-center gap-8">
+            {NAV_LINKS.map((link) =>
+              link.children ? (
+                <li
+                  key={link.label}
+                  className="relative"
+                  onMouseEnter={() => setOpenMenu(link.label)}
+                  onMouseLeave={() => setOpenMenu(null)}
                 >
-                  {link.label}
-                </NavLink>
-              </li>
-            )
-          )}
-        </ul>
+                  <button className="text-white/90 hover:text-white font-medium flex items-center gap-1 py-4">
+                    {link.label} <span className="text-xs">▾</span>
+                  </button>
 
-        <div className="hidden lg:flex items-center gap-3">
-          <Link to="/contact-us" className="btn-primary text-sm py-2 px-4">Get Quote</Link>
-        </div>
+                  <div className={`absolute top-full left-0 mt-0 bg-white rounded-lg shadow-2xl py-2 w-52 transition-all duration-200 ${
+                    openMenu === link.label ? 'opacity-100 visible' : 'opacity-0 invisible'
+                  }`}>
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.label}
+                        to={child.path}
+                        onClick={() => setOpenMenu(null)}
+                        className="block px-4 py-2 text-indigo hover:bg-pearl hover:text-crimson font-medium text-sm"
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                    {link.label === 'Services' && (
+                      <Link
+                        to="/services"
+                        onClick={() => setOpenMenu(null)}
+                        className="block px-4 py-2 text-crimson font-semibold text-sm border-t mt-1"
+                      >
+                        All Services →
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              ) : (
+                <li key={link.label}>
+                  <NavLink
+                    to={link.path}
+                    className={({ isActive }) =>
+                      `font-medium transition-colors ${isActive ? 'text-gold' : 'text-white/90 hover:text-white'}`
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                </li>
+              )
+            )}
+          </ul>
 
-        <button
-          className="lg:hidden text-white p-2"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open menu"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </nav>
+          <div className="hidden lg:flex items-center gap-3">
+            <Link to="/contact-us" className="btn-primary text-sm py-2 px-4">Get Quote</Link>
+          </div>
 
-      <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} links={NAV_LINKS} onSubscribe={() => setSubscribeOpen(true)} />
-    </header>
+          <button
+            className="lg:hidden text-white p-2"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </nav>
 
-    {subscribeOpen && <SubscribeModal onClose={() => setSubscribeOpen(false)} />}
-  </>
+        <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} links={NAV_LINKS} />
+      </header>
+
+      {subscribeOpen && <SubscribePopup onClose={handleClose} />}
+    </>
   );
 };
 

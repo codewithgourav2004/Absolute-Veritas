@@ -9,6 +9,8 @@ const {
   deleteSubscriber,
   sendNewsletter,
   sendCustomEmail,
+  getEmailLogs,
+  deleteEmailLog,
 } = require('../controllers/subscriberController');
 const { protect } = require('../middleware/auth');
 
@@ -28,5 +30,7 @@ router.put('/:id',                   protect, updateSubscriber);
 router.delete('/:id',               protect, deleteSubscriber);
 router.post('/send/:newsletterId',   protect, sendNewsletter);
 router.post('/send-email',           protect, memUpload.array('attachments', 5), sendCustomEmail);
+router.get('/email-logs',            protect, getEmailLogs);
+router.delete('/email-logs/:id',     protect, deleteEmailLog);
 
 module.exports = router;

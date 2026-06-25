@@ -1,32 +1,19 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import AdminLayout from '../components/Admin/AdminLayout';
+import CodeEditor from '../components/Admin/CodeEditor';
 import normalizeImg from '../utils/normalizeImg';
 
 const NEWS_CATEGORIES = ['General', 'BIS', 'WPC', 'TEC', 'CDSCO', 'EPR', 'FSSAI', 'CE', 'FCC', 'IT Compliance'];
 
-const toHtml = (text) =>
-  text
-    .split(/\n{2,}/)
-    .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-    .join('\n');
-
-const htmlToText = (html) => {
-  if (!html) return '';
-  return html
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+const buildPreviewSrc = (html) => {
+  const isFullDoc = /<!doctype|<html/i.test(html);
+  if (isFullDoc) return html;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:#374151;line-height:1.7;padding:16px}</style></head><body>${html}</body></html>`;
 };
 
 // ── NewsForm ──────────────────────────────────────────────────────────────────
@@ -36,19 +23,35 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
   const [preview, setPreview] = useState(initial?.coverImage || '');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [content, setContent] = useState(initial?.content || '');
+  const [codeLanguage, setCodeLanguage] = useState('html');
+  const [contentError, setContentError] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const htmlFileRef = useRef(null);
+
+  const handleHtmlFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'css') setCodeLanguage('css');
+    else if (ext === 'js') setCodeLanguage('javascript');
+    else setCodeLanguage('html');
+    const reader = new FileReader();
+    reader.onload = (ev) => { setContent(ev.target.result); setShowPreview(false); setContentError(''); };
+    reader.readAsText(file);
+  };
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
       title:       initial?.title || '',
       excerpt:     initial?.excerpt || '',
-      content:     htmlToText(initial?.content),
       category:    initial?.category || 'General',
       tags:        initial?.tags?.join(', ') || '',
       author:      initial?.author || 'Absolute Veritas',
@@ -80,11 +83,10 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
 
   const saveMutation = useMutation(
     (data) => {
-      const raw = data.content || '';
       const payload = {
         ...data,
         tags:    data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        content: raw ? toHtml(raw) : '',
+        content,
       };
       return initial
         ? api.put(`/news/${initial._id}`, payload)
@@ -99,10 +101,11 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
   );
 
   const onFormSubmit = (data) => {
-    if (!data.content?.trim()) {
-      setError('content', { message: 'Content is required' });
+    if (!content?.trim()) {
+      setContentError('Content is required');
       return;
     }
+    setContentError('');
     saveMutation.mutate(data);
   };
 
@@ -198,15 +201,54 @@ const NewsForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <label className="block text-sm font-medium text-indigo mb-1">Content *</label>
-          <p className="text-xs text-steel mb-2">Write plain text. Leave a blank line between paragraphs — no HTML needed.</p>
-          <textarea
-            {...register('content')}
-            rows={16}
-            className={`w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-crimson resize-y leading-relaxed ${errors.content ? 'border-red-400' : 'border-gray-200'}`}
-            placeholder="Write your article content here. Leave a blank line between paragraphs..."
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <label className="block text-sm font-medium text-indigo">Content *</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input ref={htmlFileRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleHtmlFileUpload} />
+              <button type="button" onClick={() => htmlFileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload .html / .css / .js
+              </button>
+              {content.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setShowPreview((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors"
+                >
+                  {showPreview ? '✕ Close Preview' : '▶ Preview'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <CodeEditor
+            value={content}
+            onChange={(v) => { setContent(v); setShowPreview(false); }}
+            language={codeLanguage}
+            onLanguageChange={setCodeLanguage}
+            height={500}
           />
-          {errors.content && <p className="text-crimson text-xs mt-1">{errors.content.message}</p>}
+
+          {showPreview && content.trim() && (
+            <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+              <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-green-700">Live Preview — sandboxed iframe</span>
+                <button type="button" onClick={() => setShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
+              </div>
+              <iframe
+                key={content}
+                srcDoc={buildPreviewSrc(content)}
+                sandbox="allow-scripts allow-same-origin"
+                className="w-full"
+                style={{ height: 500, border: 'none', display: 'block' }}
+                title="HTML Preview"
+              />
+            </div>
+          )}
+          {contentError && <p className="text-crimson text-xs mt-1">{contentError}</p>}
         </div>
 
         {/* Category + Author */}
@@ -362,7 +404,7 @@ const AdminNewsPage = () => {
                 className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < articles.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
                 {/* Thumbnail */}
-                <div className="w-20 h-[52px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+                <div className="w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
                   {article.coverImage ? (
                     <img src={normalizeImg(article.coverImage)} alt={article.title} className="w-full h-full object-cover" />
                   ) : (
