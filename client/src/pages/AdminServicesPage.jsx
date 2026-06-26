@@ -5,8 +5,10 @@ import { useForm } from 'react-hook-form';
 import api from '../utils/api';
 import AdminLayout from '../components/Admin/AdminLayout';
 import CodeEditor from '../components/Admin/CodeEditor';
+import RibbonEditor from '../components/Admin/RibbonEditor';
 import { SERVICE_CATEGORIES } from '../utils/constants';
 import normalizeImg from '../utils/normalizeImg';
+import { parseHtmlCssJs, combineHtmlCssJs, buildMultiPreview } from '../utils/htmlCssJs';
 
 const CAT_COLORS = {
   'Certification':  'bg-blue-50 text-blue-700',
@@ -16,49 +18,51 @@ const CAT_COLORS = {
   'Others':         'bg-gray-100 text-gray-600',
 };
 
-// ── Service form ──────────────────────────────────────────────────────────────
-// Wraps an HTML fragment in a full document for the preview iframe
-const buildPreviewSrc = (html) => {
-  if (!html?.trim()) return '';
-  const isFullDoc = /<!doctype|<html/i.test(html);
-  if (isFullDoc) return html;
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>*, *::before, *::after { box-sizing: border-box; } body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; color: #374151; line-height: 1.7; }</style>
-</head>
-<body>${html}</body>
-</html>`;
-};
 
 const ServiceForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
   const fileRef    = useRef(null);
-  const htmlFileRef = useRef(null);
   const [features,    setFeatures]    = useState(initial?.features?.length ? initial.features : ['']);
   const [imageUrl,    setImageUrl]    = useState(normalizeImg(initial?.image));
   const [uploading,   setUploading]   = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [isDragOver,  setIsDragOver]  = useState(false);
-  const [content,     setContent]     = useState(initial?.content || '');
-  const [codeLanguage, setCodeLanguage] = useState('html');
+  const [editorMode, setEditorMode] = useState('rich');
+  const [richContent, setRichContent] = useState('');
+  const [htmlCode, setHtmlCode] = useState('');
+  const [cssCode,  setCssCode]  = useState('');
+  const [jsCode,   setJsCode]   = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const abortRef = useRef(null);
 
-  const handleHtmlFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = '';
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'css') setCodeLanguage('css');
-    else if (ext === 'js') setCodeLanguage('javascript');
-    else setCodeLanguage('html');
-    const reader = new FileReader();
-    reader.onload = (ev) => { setContent(ev.target.result); setShowPreview(false); };
-    reader.readAsText(file);
+  useEffect(() => {
+    const raw = initial?.content || '';
+    if (raw) {
+      const hasCode = /<style|<script/i.test(raw);
+      if (hasCode) {
+        const { html, css, js } = parseHtmlCssJs(raw);
+        setHtmlCode(html); setCssCode(css); setJsCode(js);
+        setEditorMode('code');
+      } else {
+        setRichContent(raw);
+        setEditorMode('rich');
+      }
+    }
+  }, []); // eslint-disable-line
+
+  const handleModeSwitch = (mode) => {
+    if (mode === editorMode) return;
+    if (mode === 'code') {
+      setHtmlCode(richContent); setCssCode(''); setJsCode('');
+    } else {
+      if ((cssCode.trim() || jsCode.trim()) && !window.confirm('Switching to Rich Text will discard your CSS and JS code. Continue?')) return;
+      setRichContent(htmlCode);
+    }
+    setEditorMode(mode);
+    setShowPreview(false);
   };
+
+  const getContent = () => editorMode === 'rich' ? richContent : combineHtmlCssJs(htmlCode, cssCode, jsCode);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -127,7 +131,7 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
         ...data,
         image:    imageUrl,
         features: features.filter(Boolean),
-        content,
+        content:  getContent(),
       };
       return initial
         ? api.put(`/services/${initial._id}`, payload)
@@ -376,54 +380,51 @@ const ServiceForm = ({ initial, onSaved, onCancel }) => {
 
         {/* ── Full Content ── */}
         <div>
-          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-3">
             <label className="block text-sm font-medium text-indigo">
               Full Content <span className="text-steel font-normal">(optional — shown on service detail page)</span>
             </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <input ref={htmlFileRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleHtmlFileUpload} />
-              <button type="button" onClick={() => htmlFileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
-                Upload .html / .css / .js
+            {editorMode === 'code' && (htmlCode.trim() || cssCode.trim() || jsCode.trim()) && (
+              <button type="button" onClick={() => setShowPreview((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors">
+                {showPreview ? '✕ Close Preview' : '▶ Preview'}
               </button>
-              {content.trim() && (
-                <button
-                  type="button"
-                  onClick={() => setShowPreview((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors"
-                >
-                  {showPreview ? '✕ Close Preview' : '▶ Preview'}
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
-          <CodeEditor
-            value={content}
-            onChange={(v) => { setContent(v); setShowPreview(false); }}
-            language={codeLanguage}
-            onLanguageChange={setCodeLanguage}
-            height={500}
-          />
+          {/* Editor mode toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-3 border border-gray-200">
+            <button type="button" onClick={() => handleModeSwitch('rich')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${editorMode === 'rich' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round"/></svg>
+              Rich Text
+            </button>
+            <button type="button" onClick={() => handleModeSwitch('code')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${editorMode === 'code' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              HTML / CSS / JS
+            </button>
+          </div>
 
-          {showPreview && content.trim() && (
-            <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
-              <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-green-700">Live Preview — sandboxed iframe</span>
-                <button type="button" onClick={() => setShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
-              </div>
-              <iframe
-                key={content}
-                srcDoc={buildPreviewSrc(content)}
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full"
-                style={{ height: 500, border: 'none', display: 'block' }}
-                title="HTML Preview"
-              />
-            </div>
+          {editorMode === 'rich' ? (
+            <RibbonEditor key="svc-rich" value={richContent} onChange={setRichContent} minHeight={420} />
+          ) : (
+            <>
+              <CodeEditor multiMode htmlValue={htmlCode} cssValue={cssCode} jsValue={jsCode}
+                onMultiChange={({ html, css, js }) => { setHtmlCode(html); setCssCode(css); setJsCode(js); setShowPreview(false); }}
+                height={500} />
+              {showPreview && (htmlCode.trim() || cssCode.trim() || jsCode.trim()) && (
+                <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+                  <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-green-700">Live Preview — HTML + CSS + JS combined</span>
+                    <button type="button" onClick={() => setShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
+                  </div>
+                  <iframe key={`${htmlCode}${cssCode}${jsCode}`} srcDoc={buildMultiPreview(htmlCode, cssCode, jsCode)}
+                    sandbox="allow-scripts allow-same-origin" className="w-full"
+                    style={{ height: 500, border: 'none', display: 'block' }} title="Preview" />
+                </div>
+              )}
+            </>
           )}
         </div>
 

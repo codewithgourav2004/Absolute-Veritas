@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { parseHtmlCssJs, combineHtmlCssJs, buildMultiPreview } from '../utils/htmlCssJs';
+import RibbonEditor from '../components/Admin/RibbonEditor';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -15,12 +17,6 @@ const MONTHS = [
 ];
 
 const NEWS_CATEGORIES = ['General', 'BIS', 'WPC', 'TEC', 'CDSCO', 'EPR', 'FSSAI', 'CE', 'FCC', 'IT Compliance'];
-
-const buildPreviewSrc = (html) => {
-  const isFullDoc = /<!doctype|<html/i.test(html);
-  if (isFullDoc) return html;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;font-family:'DM Sans',system-ui,sans-serif;color:#374151;line-height:1.7;padding:16px}</style></head><body>${html}</body></html>`;
-};
 
 const toHtml = (text) =>
   text
@@ -147,27 +143,45 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
   const fileRef    = useRef(null);
   const pdfFileRef = useRef(null);
-  const nlHtmlRef  = useRef(null);
   const [preview,      setPreview]      = useState(initial?.coverImage || '');
   const [uploading,    setUploading]    = useState(false);
   const [uploadError,  setUploadError]  = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
   const [pdfUploadErr, setPdfUploadErr] = useState('');
-  const [nlContent,  setNlContent]  = useState(initial?.content || '');
-  const [nlCodeLang, setNlCodeLang] = useState('html');
+  const [nlEditorMode,  setNlEditorMode]  = useState('rich');
+  const [nlRichContent, setNlRichContent] = useState('');
+  const [nlHtml,        setNlHtml]        = useState('');
+  const [nlCss,         setNlCss]         = useState('');
+  const [nlJs,          setNlJs]          = useState('');
+  const [nlShowPreview, setNlShowPreview] = useState(false);
 
-  const handleNlHtmlUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = '';
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'css') setNlCodeLang('css');
-    else if (ext === 'js') setNlCodeLang('javascript');
-    else setNlCodeLang('html');
-    const reader = new FileReader();
-    reader.onload = (ev) => { setNlContent(ev.target.result); };
-    reader.readAsText(file);
+  useEffect(() => {
+    const raw = initial?.content || '';
+    if (raw) {
+      const hasCode = /<style|<script/i.test(raw);
+      if (hasCode) {
+        const { html, css, js } = parseHtmlCssJs(raw);
+        setNlHtml(html); setNlCss(css); setNlJs(js);
+        setNlEditorMode('code');
+      } else {
+        setNlRichContent(raw);
+        setNlEditorMode('rich');
+      }
+    }
+  }, []); // eslint-disable-line
+
+  const handleNlModeSwitch = (mode) => {
+    if (mode === nlEditorMode) return;
+    if (mode === 'code') {
+      setNlHtml(nlRichContent); setNlCss(''); setNlJs('');
+    } else {
+      if ((nlCss.trim() || nlJs.trim()) && !window.confirm('Switching to Rich Text will discard your CSS and JS code. Continue?')) return;
+      setNlRichContent(nlHtml);
+    }
+    setNlEditorMode(mode); setNlShowPreview(false);
   };
+
+  const getNlContent = () => nlEditorMode === 'rich' ? nlRichContent : combineHtmlCssJs(nlHtml, nlCss, nlJs);
 
   const {
     register,
@@ -230,7 +244,7 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       const payload = {
         ...data,
         year: parseInt(data.year, 10),
-        content: nlContent,
+        content: getNlContent(),
       };
       return initial
         ? api.put(`/newsletters/${initial._id}`, payload)
@@ -348,27 +362,51 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-indigo">Full Content</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <input ref={nlHtmlRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleNlHtmlUpload} />
-              <button type="button" onClick={() => nlHtmlRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
-                Upload .html / .css / .js
+            {nlEditorMode === 'code' && (nlHtml.trim() || nlCss.trim() || nlJs.trim()) && (
+              <button type="button" onClick={() => setNlShowPreview((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors">
+                {nlShowPreview ? '✕ Close Preview' : '▶ Preview'}
               </button>
-            </div>
+            )}
           </div>
           <p className="text-xs text-steel mb-2">Leave blank if PDF-only.</p>
-          <CodeEditor
-            value={nlContent}
-            onChange={setNlContent}
-            language={nlCodeLang}
-            onLanguageChange={setNlCodeLang}
-            height={460}
-          />
+
+          {/* Editor mode toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-3 border border-gray-200">
+            <button type="button" onClick={() => handleNlModeSwitch('rich')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${nlEditorMode === 'rich' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round"/></svg>
+              Rich Text
+            </button>
+            <button type="button" onClick={() => handleNlModeSwitch('code')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${nlEditorMode === 'code' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              HTML / CSS / JS
+            </button>
+          </div>
+
+          {nlEditorMode === 'rich' ? (
+            <RibbonEditor key="nl-rich" value={nlRichContent} onChange={setNlRichContent} minHeight={400} />
+          ) : (
+            <>
+              <CodeEditor multiMode htmlValue={nlHtml} cssValue={nlCss} jsValue={nlJs}
+                onMultiChange={({ html, css, js }) => { setNlHtml(html); setNlCss(css); setNlJs(js); setNlShowPreview(false); }}
+                height={460} />
+              {nlShowPreview && (nlHtml.trim() || nlCss.trim() || nlJs.trim()) && (
+                <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+                  <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-green-700">Live Preview — HTML + CSS + JS combined</span>
+                    <button type="button" onClick={() => setNlShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
+                  </div>
+                  <iframe key={`${nlHtml}${nlCss}${nlJs}`} srcDoc={buildMultiPreview(nlHtml, nlCss, nlJs)}
+                    sandbox="allow-scripts allow-same-origin" className="w-full"
+                    style={{ height: 500, border: 'none', display: 'block' }} title="Preview" />
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Month + Year */}
@@ -467,27 +505,44 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
 const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
   const qc = useQueryClient();
   const fileRef   = useRef(null);
-  const naHtmlRef = useRef(null);
   const [preview, setPreview] = useState(initial?.coverImage || '');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [naContent,      setNaContent]      = useState(initial?.content || '');
+  const [naEditorMode,  setNaEditorMode]  = useState('rich');
+  const [naRichContent, setNaRichContent] = useState('');
+  const [naHtml, setNaHtml] = useState('');
+  const [naCss,  setNaCss]  = useState('');
+  const [naJs,   setNaJs]   = useState('');
   const [naContentError, setNaContentError] = useState('');
   const [naShowPreview,  setNaShowPreview]  = useState(false);
-  const [naCodeLang,     setNaCodeLang]     = useState('html');
 
-  const handleNaHtmlUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = '';
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'css') setNaCodeLang('css');
-    else if (ext === 'js') setNaCodeLang('javascript');
-    else setNaCodeLang('html');
-    const reader = new FileReader();
-    reader.onload = (ev) => { setNaContent(ev.target.result); setNaShowPreview(false); setNaContentError(''); };
-    reader.readAsText(file);
+  useEffect(() => {
+    const raw = initial?.content || '';
+    if (raw) {
+      const hasCode = /<style|<script/i.test(raw);
+      if (hasCode) {
+        const { html, css, js } = parseHtmlCssJs(raw);
+        setNaHtml(html); setNaCss(css); setNaJs(js);
+        setNaEditorMode('code');
+      } else {
+        setNaRichContent(raw);
+        setNaEditorMode('rich');
+      }
+    }
+  }, []); // eslint-disable-line
+
+  const handleNaModeSwitch = (mode) => {
+    if (mode === naEditorMode) return;
+    if (mode === 'code') {
+      setNaHtml(naRichContent); setNaCss(''); setNaJs('');
+    } else {
+      if ((naCss.trim() || naJs.trim()) && !window.confirm('Switching to Rich Text will discard your CSS and JS code. Continue?')) return;
+      setNaRichContent(naHtml);
+    }
+    setNaEditorMode(mode); setNaShowPreview(false);
   };
+
+  const getNaContent = () => naEditorMode === 'rich' ? naRichContent : combineHtmlCssJs(naHtml, naCss, naJs);
 
   const {
     register,
@@ -533,7 +588,7 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
       const payload = {
         ...data,
         tags:    data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        content: naContent,
+        content: getNaContent(),
       };
       return initial
         ? api.put(`/news/${initial._id}`, payload)
@@ -549,7 +604,7 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
   );
 
   const onFormSubmit = (data) => {
-    if (!naContent?.trim()) { setNaContentError('Content is required'); return; }
+    if (!getNaContent().trim()) { setNaContentError('Content is required'); return; }
     setNaContentError('');
     saveMutation.mutate(data);
   };
@@ -646,52 +701,49 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
 
         {/* Content */}
         <div>
-          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div className="flex items-center justify-between mb-3">
             <label className="block text-sm font-medium text-indigo">Content *</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <input ref={naHtmlRef} type="file" accept=".html,.htm,.css,.js" className="hidden" onChange={handleNaHtmlUpload} />
-              <button type="button" onClick={() => naHtmlRef.current?.click()}
-                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100 font-semibold transition-colors">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                </svg>
-                Upload .html / .css / .js
+            {naEditorMode === 'code' && (naHtml.trim() || naCss.trim() || naJs.trim()) && (
+              <button type="button" onClick={() => setNaShowPreview((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors">
+                {naShowPreview ? '✕ Close Preview' : '▶ Preview'}
               </button>
-              {naContent.trim() && (
-                <button
-                  type="button"
-                  onClick={() => setNaShowPreview((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 font-semibold transition-colors"
-                >
-                  {naShowPreview ? '✕ Close Preview' : '▶ Preview'}
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
-          <CodeEditor
-            value={naContent}
-            onChange={(v) => { setNaContent(v); setNaShowPreview(false); }}
-            language={naCodeLang}
-            onLanguageChange={setNaCodeLang}
-            height={460}
-          />
+          {/* Editor mode toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg w-fit mb-3 border border-gray-200">
+            <button type="button" onClick={() => handleNaModeSwitch('rich')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${naEditorMode === 'rich' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round"/></svg>
+              Rich Text
+            </button>
+            <button type="button" onClick={() => handleNaModeSwitch('code')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${naEditorMode === 'code' ? 'bg-white shadow-sm text-indigo border border-gray-200' : 'text-steel hover:text-indigo'}`}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              HTML / CSS / JS
+            </button>
+          </div>
 
-          {naShowPreview && naContent.trim() && (
-            <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
-              <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-green-700">Live Preview — sandboxed iframe</span>
-                <button type="button" onClick={() => setNaShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
-              </div>
-              <iframe
-                key={naContent}
-                srcDoc={buildPreviewSrc(naContent)}
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full"
-                style={{ height: 500, border: 'none', display: 'block' }}
-                title="HTML Preview"
-              />
-            </div>
+          {naEditorMode === 'rich' ? (
+            <RibbonEditor key="na-rich" value={naRichContent} onChange={setNaRichContent} minHeight={400} />
+          ) : (
+            <>
+              <CodeEditor multiMode htmlValue={naHtml} cssValue={naCss} jsValue={naJs}
+                onMultiChange={({ html, css, js }) => { setNaHtml(html); setNaCss(css); setNaJs(js); setNaShowPreview(false); }}
+                height={460} />
+              {naShowPreview && (naHtml.trim() || naCss.trim() || naJs.trim()) && (
+                <div className="mt-3 rounded-xl overflow-hidden border-2 border-green-200 shadow-sm">
+                  <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-green-700">Live Preview — HTML + CSS + JS combined</span>
+                    <button type="button" onClick={() => setNaShowPreview(false)} className="text-green-600 hover:text-green-800 text-xs">✕ Close</button>
+                  </div>
+                  <iframe key={`${naHtml}${naCss}${naJs}`} srcDoc={buildMultiPreview(naHtml, naCss, naJs)}
+                    sandbox="allow-scripts allow-same-origin" className="w-full"
+                    style={{ height: 500, border: 'none', display: 'block' }} title="Preview" />
+                </div>
+              )}
+            </>
           )}
           {naContentError && <p className="text-crimson text-xs mt-1">{naContentError}</p>}
         </div>
@@ -1092,9 +1144,9 @@ const AdminNewsletterPage = () => {
                     key={nl._id}
                     className={`flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors ${i < newsletters.length - 1 ? 'border-b border-gray-100' : ''}`}
                   >
-                    <div className="w-24 h-16 rounded-lg overflow-hidden bg-indigo/10 flex-shrink-0">
+                    <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                       {nl.coverImage ? (
-                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="w-full h-full object-cover" />
+                        <img src={normalizeImg(nl.coverImage)} alt={nl.title} className="w-full h-full object-contain" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-indigo to-indigo/60 flex items-center justify-center">
                           <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">

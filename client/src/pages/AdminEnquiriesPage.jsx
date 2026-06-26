@@ -90,6 +90,7 @@ const AdminEnquiriesPage = () => {
   const [expandedId,     setExpandedId]     = useState(null);
   const [localRead,      setLocalRead]      = useState(new Set());
   const [localUnread,    setLocalUnread]    = useState(new Set());
+  const [deleteConfirm,  setDeleteConfirm]  = useState(null);
   const qc = useQueryClient();
 
   // Always fetch all for accurate stats, filter client-side for category
@@ -117,6 +118,18 @@ const AdminEnquiriesPage = () => {
     ({ id, ...patch }) => api.put(`/enquiries/${id}`, patch),
     {
       onSuccess: () => {
+        qc.invalidateQueries('admin-enquiries');
+        qc.invalidateQueries('admin-enquiries-stats');
+      },
+    }
+  );
+
+  const deleteMutation = useMutation(
+    (id) => api.delete(`/enquiries/${id}`),
+    {
+      onSuccess: () => {
+        setDeleteConfirm(null);
+        setExpandedId(null);
         qc.invalidateQueries('admin-enquiries');
         qc.invalidateQueries('admin-enquiries-stats');
       },
@@ -383,21 +396,73 @@ const AdminEnquiriesPage = () => {
                           </button>
                         ))}
 
-                        {enq.email && (
-                          <a
-                            href={`mailto:${enq.email}?subject=Re: Your Enquiry — Absolute Veritas`}
-                            className="ml-auto text-xs font-semibold px-4 py-2 rounded-lg bg-crimson hover:bg-indigo text-white transition-colors flex items-center gap-1.5"
+                        <div className="ml-auto flex items-center gap-2">
+                          {enq.email && (
+                            <a
+                              href={`mailto:${enq.email}?subject=Re: Your Enquiry — Absolute Veritas`}
+                              className="text-xs font-semibold px-4 py-2 rounded-lg bg-crimson hover:bg-indigo text-white transition-colors flex items-center gap-1.5"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                              Reply via Email
+                            </a>
+                          )}
+                          <button
+                            onClick={() => setDeleteConfirm(enq)}
+                            className="text-xs font-semibold px-3 py-2 rounded-lg border border-red-200 text-red-600 bg-white hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors flex items-center gap-1.5"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                            Reply via Email
-                          </a>
-                        )}
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
               );
             })}
+          </div>
+        )}
+        {/* ── Delete confirmation modal ── */}
+        {deleteConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl p-7 max-w-sm w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-indigo text-base">Delete Enquiry</h3>
+                  <p className="text-xs text-steel">This action cannot be undone.</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-700 mb-5">
+                Are you sure you want to delete the enquiry from{' '}
+                <strong className="text-indigo">{deleteConfirm.name}</strong>?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 text-steel hover:border-indigo hover:text-indigo transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={deleteMutation.isLoading}
+                  onClick={() => deleteMutation.mutate(deleteConfirm._id)}
+                  className="flex-1 px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isLoading ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </AdminLayout>
