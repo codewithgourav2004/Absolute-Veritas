@@ -7,12 +7,13 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./config/db');
+const { runScheduler } = require('./scheduler');
 
 const app = express();
 
 app.set('trust proxy', 1);
 
-connectDB();
+connectDB().then(() => runScheduler());
 
 // Gzip all responses
 app.use(compression());

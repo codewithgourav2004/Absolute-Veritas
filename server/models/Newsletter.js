@@ -10,6 +10,7 @@ const newsletterSchema = new mongoose.Schema({
   coverImage:  { type: String, default: '' },
   pdfLink:     { type: String, default: '' },
   isPublished: { type: Boolean, default: false },
+  scheduledAt: { type: Date, default: null },
   emailedAt:   { type: Date, default: null },
 }, { timestamps: true });
 module.exports = mongoose.model('Newsletter', newsletterSchema);

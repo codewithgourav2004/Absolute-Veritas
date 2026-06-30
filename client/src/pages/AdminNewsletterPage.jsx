@@ -154,6 +154,17 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
   const [nlCss,         setNlCss]         = useState('');
   const [nlJs,          setNlJs]          = useState('');
   const [nlShowPreview, setNlShowPreview] = useState(false);
+  const [publishMode,   setPublishMode]   = useState(() => {
+    if (initial?.scheduledAt) return 'schedule';
+    if (initial?.isPublished) return 'now';
+    return 'draft';
+  });
+  const [scheduledAt, setScheduledAt] = useState(() => {
+    if (initial?.scheduledAt) return new Date(initial.scheduledAt).toISOString().slice(0, 16);
+    // default to tomorrow 09:00
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  });
 
   useEffect(() => {
     const raw = initial?.content || '';
@@ -198,7 +209,6 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
       excerpt:     initial?.excerpt || '',
       coverImage:  initial?.coverImage || '',
       pdfLink:     initial?.pdfLink || '',
-      isPublished: initial?.isPublished ?? false,
     },
   });
 
@@ -245,6 +255,8 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
         ...data,
         year: parseInt(data.year, 10),
         content: getNlContent(),
+        isPublished: publishMode === 'now',
+        scheduledAt: publishMode === 'schedule' ? new Date(scheduledAt).toISOString() : null,
       };
       return initial
         ? api.put(`/newsletters/${initial._id}`, payload)
@@ -466,15 +478,57 @@ const NewsletterForm = ({ initial, onSaved, onCancel }) => {
           </div>
         </div>
 
-        {/* Published toggle */}
-        <label className="flex items-center gap-3 cursor-pointer w-fit">
-          <div className="relative">
-            <input type="checkbox" {...register('isPublished')} className="sr-only peer" />
-            <div className="w-11 h-6 bg-gray-200 peer-checked:bg-crimson rounded-full transition-colors" />
-            <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+        {/* Publish mode */}
+        <div>
+          <label className="block text-sm font-medium text-indigo mb-3">Publish Mode</label>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[
+              { value: 'draft',    label: 'Save as Draft',   icon: '📝', desc: 'Not visible to users' },
+              { value: 'schedule', label: 'Schedule',        icon: '⏰', desc: 'Auto-publish at chosen time' },
+              { value: 'now',      label: 'Publish Now',     icon: '✅', desc: 'Go live immediately' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPublishMode(opt.value)}
+                className={`flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all ${
+                  publishMode === opt.value
+                    ? opt.value === 'now'
+                      ? 'border-green-500 bg-green-50'
+                      : opt.value === 'schedule'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-400 bg-gray-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-lg mb-1">{opt.icon}</span>
+                <span className={`text-xs font-bold block ${
+                  publishMode === opt.value
+                    ? opt.value === 'now' ? 'text-green-700' : opt.value === 'schedule' ? 'text-blue-700' : 'text-gray-700'
+                    : 'text-indigo'
+                }`}>{opt.label}</span>
+                <span className="text-[10px] text-steel mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
           </div>
-          <span className="text-sm font-medium text-indigo">Publish immediately</span>
-        </label>
+          {publishMode === 'schedule' && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <div className="flex-grow">
+                <label className="block text-xs font-semibold text-blue-700 mb-1">Publish at</label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  min={new Date().toISOString().slice(0, 16)}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full border border-blue-300 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {saveMutation.isError && (
           <p className="text-crimson text-sm">{saveMutation.error?.response?.data?.message || 'Save failed. Try again.'}</p>
@@ -515,6 +569,16 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
   const [naJs,   setNaJs]   = useState('');
   const [naContentError, setNaContentError] = useState('');
   const [naShowPreview,  setNaShowPreview]  = useState(false);
+  const [naPublishMode, setNaPublishMode] = useState(() => {
+    if (initial?.scheduledAt) return 'schedule';
+    if (initial?.isPublished) return 'now';
+    return 'draft';
+  });
+  const [naScheduledAt, setNaScheduledAt] = useState(() => {
+    if (initial?.scheduledAt) return new Date(initial.scheduledAt).toISOString().slice(0, 16);
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  });
 
   useEffect(() => {
     const raw = initial?.content || '';
@@ -559,7 +623,6 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
       author:      initial?.author || 'Absolute Veritas',
       coverImage:  initial?.coverImage || '',
       isTrending:  initial?.isTrending ?? false,
-      isPublished: initial?.isPublished ?? false,
     },
   });
 
@@ -587,8 +650,10 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
     (data) => {
       const payload = {
         ...data,
-        tags:    data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-        content: getNaContent(),
+        tags:        data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        content:     getNaContent(),
+        isPublished: naPublishMode === 'now',
+        scheduledAt: naPublishMode === 'schedule' ? new Date(naScheduledAt).toISOString() : null,
       };
       return initial
         ? api.put(`/news/${initial._id}`, payload)
@@ -781,25 +846,66 @@ const NewsArticleForm = ({ initial, onSaved, onCancel }) => {
           />
         </div>
 
-        {/* Toggles */}
-        <div className="flex flex-wrap gap-6">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div className="relative">
-              <input type="checkbox" {...register('isTrending')} className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-checked:bg-gold rounded-full transition-colors" />
-              <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
-            </div>
-            <span className="text-sm font-medium text-indigo">Mark as Trending</span>
-          </label>
+        {/* Trending toggle */}
+        <label className="flex items-center gap-3 cursor-pointer w-fit">
+          <div className="relative">
+            <input type="checkbox" {...register('isTrending')} className="sr-only peer" />
+            <div className="w-11 h-6 bg-gray-200 peer-checked:bg-gold rounded-full transition-colors" />
+            <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+          </div>
+          <span className="text-sm font-medium text-indigo">Mark as Trending</span>
+        </label>
 
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div className="relative">
-              <input type="checkbox" {...register('isPublished')} className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-checked:bg-crimson rounded-full transition-colors" />
-              <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+        {/* Publish mode */}
+        <div>
+          <label className="block text-sm font-medium text-indigo mb-3">Publish Mode</label>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[
+              { value: 'draft',    label: 'Save as Draft',   icon: '📝', desc: 'Not visible to users' },
+              { value: 'schedule', label: 'Schedule',        icon: '⏰', desc: 'Auto-publish at chosen time' },
+              { value: 'now',      label: 'Publish Now',     icon: '✅', desc: 'Go live immediately' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setNaPublishMode(opt.value)}
+                className={`flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all ${
+                  naPublishMode === opt.value
+                    ? opt.value === 'now'
+                      ? 'border-green-500 bg-green-50'
+                      : opt.value === 'schedule'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-400 bg-gray-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span className="text-lg mb-1">{opt.icon}</span>
+                <span className={`text-xs font-bold block ${
+                  naPublishMode === opt.value
+                    ? opt.value === 'now' ? 'text-green-700' : opt.value === 'schedule' ? 'text-blue-700' : 'text-gray-700'
+                    : 'text-indigo'
+                }`}>{opt.label}</span>
+                <span className="text-[10px] text-steel mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+          {naPublishMode === 'schedule' && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <div className="flex-grow">
+                <label className="block text-xs font-semibold text-blue-700 mb-1">Publish at</label>
+                <input
+                  type="datetime-local"
+                  value={naScheduledAt}
+                  min={new Date().toISOString().slice(0, 16)}
+                  onChange={(e) => setNaScheduledAt(e.target.value)}
+                  className="w-full border border-blue-300 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
             </div>
-            <span className="text-sm font-medium text-indigo">Publish immediately</span>
-          </label>
+          )}
         </div>
 
         {saveMutation.isError && (
@@ -1174,8 +1280,8 @@ const AdminNewsletterPage = () => {
                         <span className="text-gray-300">·</span>
                         <span className="text-xs text-steel">{nl.month} {nl.year}</span>
                         <span className="text-gray-300">·</span>
-                        <span className={`text-xs font-semibold ${nl.isPublished ? 'text-green-600' : 'text-amber-500'}`}>
-                          {nl.isPublished ? 'Published' : 'Draft'}
+                        <span className={`text-xs font-semibold ${nl.isPublished ? 'text-green-600' : nl.scheduledAt ? 'text-blue-500' : 'text-amber-500'}`}>
+                          {nl.isPublished ? 'Published' : nl.scheduledAt ? `⏰ ${new Date(nl.scheduledAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Draft'}
                         </span>
                         {nl.pdfLink && (
                           <>
@@ -1308,8 +1414,8 @@ const AdminNewsletterPage = () => {
                         <span className="text-gray-300">·</span>
                         <span className="text-xs text-steel">{formatDate(article.publishedAt)}</span>
                         <span className="text-gray-300">·</span>
-                        <span className={`text-xs font-semibold ${article.isPublished ? 'text-green-600' : 'text-amber-500'}`}>
-                          {article.isPublished ? 'Published' : 'Draft'}
+                        <span className={`text-xs font-semibold ${article.isPublished ? 'text-green-600' : article.scheduledAt ? 'text-blue-500' : 'text-amber-500'}`}>
+                          {article.isPublished ? 'Published' : article.scheduledAt ? `⏰ ${new Date(article.scheduledAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'Draft'}
                         </span>
                       </div>
                     </div>

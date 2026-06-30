@@ -10,6 +10,7 @@ const newsSchema = new mongoose.Schema({
   author:      { type: String, default: 'Absolute Veritas' },
   isTrending:  { type: Boolean, default: false },
   isPublished: { type: Boolean, default: false },
+  scheduledAt: { type: Date, default: null },
   publishedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 module.exports = mongoose.model('News', newsSchema);

@@ -52,25 +52,33 @@ const ServicesPage = () => {
 
       <div className="pt-16">
         {/* Hero */}
-        <div className="relative bg-indigo py-16 text-center overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 15% 70%, rgba(230,57,70,0.15) 0%, transparent 50%), radial-gradient(ellipse at 85% 20%, rgba(212,175,55,0.10) 0%, transparent 45%), radial-gradient(ellipse at 50% 100%, rgba(26,31,60,0.8) 0%, transparent 60%)' }} />
+        <div className="relative bg-indigo py-20 text-center overflow-hidden">
+          {/* Layered gradients */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 10% 80%, rgba(230,57,70,0.18) 0%, transparent 45%), radial-gradient(ellipse at 90% 15%, rgba(212,175,55,0.12) 0%, transparent 45%), radial-gradient(ellipse at 50% 110%, rgba(26,31,60,0.9) 0%, transparent 55%)' }} />
           {/* Dot grid */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-            style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+          <div className="absolute inset-0 pointer-events-none opacity-[0.035]"
+            style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+          {/* Horizontal glow line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-crimson/30 to-transparent" />
+
           <div className="relative z-10 container-max">
-            <span className="inline-block text-xs font-mono font-semibold text-crimson bg-crimson/10 border border-crimson/25 uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-5">
+            <span className="inline-flex items-center gap-2 text-[10px] font-mono font-bold text-crimson bg-crimson/10 border border-crimson/25 uppercase tracking-[0.25em] px-4 py-1.5 rounded-full mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-crimson animate-pulse" />
               TIC &amp; IT Compliance
             </span>
-            <h1 className="font-display text-4xl md:text-5xl font-black text-white mb-4 leading-tight">Our Services</h1>
-            <p className="text-gray-400 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+            <h1 className="font-display text-4xl md:text-[52px] font-black text-white mb-4 leading-[1.1] tracking-tight">
+              Our Services
+            </h1>
+            <p className="text-gray-400 text-base md:text-lg max-w-lg mx-auto leading-relaxed">
               End-to-end regulatory compliance across certifications, testing, inspection and IT security.
             </p>
-            {/* Quick stats */}
-            <div className="flex flex-wrap justify-center gap-6 mt-8">
-              {[['15+', 'Bodies Covered'], ['50+', 'Service Types'], ['24h', 'Response Time']].map(([val, label]) => (
-                <div key={label} className="text-center">
-                  <div className="font-display text-xl font-black text-gold">{val}</div>
-                  <div className="text-gray-500 text-xs mt-0.5 tracking-wide">{label}</div>
+
+            {/* Stat pills */}
+            <div className="flex flex-wrap justify-center gap-3 mt-10">
+              {[['15+', 'Regulatory Bodies'], ['50+', 'Service Types'], ['24h', 'Response Time'], ['500+', 'Clients Served']].map(([val, label]) => (
+                <div key={label} className="flex items-center gap-3 bg-white/[0.05] border border-white/[0.1] backdrop-blur-sm px-5 py-2.5 rounded-full">
+                  <span className="font-display text-lg font-black text-gold leading-none">{val}</span>
+                  <span className="text-gray-500 text-xs tracking-wide">{label}</span>
                 </div>
               ))}
             </div>
@@ -78,7 +86,7 @@ const ServicesPage = () => {
         </div>
 
         {/* Sticky tab bar */}
-        <div className={`sticky top-16 z-20 border-b transition-colors duration-300 ${isDark ? 'bg-[#0d1128]/95 border-white/10 backdrop-blur-sm' : 'bg-white border-gray-200 shadow-sm'}`}>
+        <div className={`sticky top-16 z-20 border-b transition-colors duration-300 ${isDark ? 'bg-[#0a0e26]/96 border-white/[0.07] backdrop-blur-md' : 'bg-white/95 border-gray-200/80 backdrop-blur-sm shadow-sm'}`}>
           <div className="container-max">
             <div className="flex flex-wrap justify-center gap-1.5 py-3">
               {ALL_TABS.map((cat) => (
@@ -87,13 +95,13 @@ const ServicesPage = () => {
                   onClick={() => setCategory(cat)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                     activeCategory === cat
-                      ? 'bg-crimson text-white shadow-lg shadow-crimson/25'
+                      ? 'bg-crimson text-white shadow-lg shadow-crimson/30 scale-[1.02]'
                       : isDark
-                      ? 'text-gray-400 border border-white/8 bg-white/[0.03] hover:bg-white/10 hover:text-white hover:border-white/20'
-                      : 'text-steel border border-gray-200 hover:bg-indigo hover:text-white hover:border-indigo'
+                      ? 'text-gray-400 border border-white/10 bg-white/[0.02] hover:bg-crimson/15 hover:text-crimson hover:border-crimson/30'
+                      : 'text-gray-600 border border-gray-200 hover:bg-crimson/10 hover:text-crimson hover:border-crimson/30 hover:shadow-sm'
                   }`}
                 >
-                  <span className="text-sm">{TAB_ICONS[cat] || '📋'}</span>
+                  <span>{TAB_ICONS[cat] || '📋'}</span>
                   {cat}
                 </button>
               ))}
@@ -103,7 +111,7 @@ const ServicesPage = () => {
 
         {/* Content */}
         <section className={`transition-colors duration-300 ${isDark ? 'bg-indigo' : 'bg-pearl'}`}>
-          <div className="container-max section-padding">
+          <div className={`container-max ${isDark ? 'py-8 md:py-10' : 'section-padding'}`}>
             <Suspense fallback={<Loader />}>
               {(activeCategory === 'Certification' || activeCategory === 'Testing' || activeCategory === 'Inspection' || activeCategory === 'IT Compliance') ? (
                 <ServiceGroupPanel key={activeCategory} category={activeCategory} onEnquire={setSelectedService} />
@@ -119,9 +127,12 @@ const ServicesPage = () => {
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-6">
-                    <p className="text-steel text-sm">
-                      Showing <span className="font-semibold text-indigo">{services.length}</span> services
-                    </p>
+                    <div>
+                      <h2 className="font-display font-bold text-indigo text-xl mb-0.5">All Services</h2>
+                      <p className="text-gray-500 text-sm">
+                        <span className="font-semibold text-crimson">{services.length}</span> services available
+                      </p>
+                    </div>
                   </div>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {services.map((s) => (
