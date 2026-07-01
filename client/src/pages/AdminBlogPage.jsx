@@ -446,13 +446,21 @@ const AdminBlogPage = () => {
                 className={`flex items-center gap-5 px-5 py-4 hover:bg-gray-50/70 transition-colors ${i < blogs.length - 1 ? 'border-b border-gray-100' : ''}`}
               >
                 {/* Thumbnail */}
-                <div className="w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+                <div className="w-28 h-[72px] rounded-xl overflow-hidden flex-shrink-0 shadow-sm relative bg-gray-100">
                   {blog.coverImage ? (
-                    <img
-                      src={normalizeImg(blog.coverImage)}
-                      alt={blog.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={normalizeImg(blog.coverImage)}
+                        alt=""
+                        aria-hidden
+                        className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-40 pointer-events-none"
+                      />
+                      <img
+                        src={normalizeImg(blog.coverImage)}
+                        alt={blog.title}
+                        className="absolute inset-0 w-full h-full object-contain z-10"
+                      />
+                    </>
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-indigo via-indigo/80 to-crimson/60 flex items-center justify-center">
                       <span className="text-white font-black text-lg leading-none select-none">

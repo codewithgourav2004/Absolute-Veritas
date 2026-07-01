@@ -83,9 +83,9 @@ const BlogCard = ({ blog, index = 0, featured = false }) => {
         </span>
 
         {/* Thumbnail */}
-        <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50">
+        <div className="relative w-28 h-20 sm:w-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
           {blog.coverImage ? (
-            <img src={normalizeImg(blog.coverImage)} alt={blog.title} loading="lazy" decoding="async" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+            <img src={normalizeImg(blog.coverImage)} alt={blog.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
           ) : (
             <Placeholder />
           )}

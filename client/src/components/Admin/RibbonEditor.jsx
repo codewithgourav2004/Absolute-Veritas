@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -130,8 +130,9 @@ const Group = ({ label, children }) => (
 
 // ── Main component ────────────────────────────────────────────────────────────
 const RibbonEditor = ({ value = '', onChange, minHeight = 380 }) => {
-  const colorInputRef = useRef(null);
-  const highlightInputRef = useRef(null);
+  const colorInputRef      = useRef(null);
+  const highlightInputRef  = useRef(null);
+  const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => { injectRibbonStyles(); }, []);
 
@@ -184,164 +185,204 @@ const RibbonEditor = ({ value = '', onChange, minHeight = 380 }) => {
     <div className="rounded-xl border border-gray-300 overflow-hidden shadow-sm flex flex-col">
       {/* ── Tab bar ── */}
       <div className="bg-[#f0f0f0] border-b border-gray-300 flex items-center px-3 pt-1 gap-1">
-        <button className="text-[12px] font-semibold text-blue-700 border-b-2 border-blue-600 px-3 pb-1 -mb-px bg-white rounded-t-md shadow-sm">
-          Home
-        </button>
-        <button className="text-[12px] text-gray-500 hover:text-gray-700 px-3 pb-1">Insert</button>
-        <button className="text-[12px] text-gray-500 hover:text-gray-700 px-3 pb-1">Format</button>
+        {['home', 'insert', 'format'].map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`text-[12px] font-semibold px-3 pb-1 capitalize transition-all ${
+              activeTab === tab
+                ? 'text-blue-700 border-b-2 border-blue-600 -mb-px bg-white rounded-t-md shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* ── Ribbon toolbar ── */}
-      <div className="bg-white border-b border-gray-200 px-2 py-1.5 flex items-stretch gap-0 overflow-x-auto flex-shrink-0">
+      <div className="bg-white border-b border-gray-200 px-2 py-1.5 flex items-stretch gap-0 overflow-x-auto flex-shrink-0 min-h-[56px]">
 
-        {/* Clipboard group */}
-        <Group label="Clipboard">
-          <Btn title="Undo (Ctrl+Z)" disabled={!can.undo()} onClick={() => editor.chain().focus().undo().run()}>
-            <Ico d={icons.undo} />
-          </Btn>
-          <Btn title="Redo (Ctrl+Y)" disabled={!can.redo()} onClick={() => editor.chain().focus().redo().run()}>
-            <Ico d={icons.redo} />
-          </Btn>
-        </Group>
+        {/* ── HOME tab ── */}
+        {activeTab === 'home' && <>
+          <Group label="Clipboard">
+            <Btn title="Undo (Ctrl+Z)" disabled={!can.undo()} onClick={() => editor.chain().focus().undo().run()}>
+              <Ico d={icons.undo} />
+            </Btn>
+            <Btn title="Redo (Ctrl+Y)" disabled={!can.redo()} onClick={() => editor.chain().focus().redo().run()}>
+              <Ico d={icons.redo} />
+            </Btn>
+          </Group>
 
-        {/* Font group */}
-        <Group label="Font">
-          <Btn title="Bold (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h8a4 4 0 010 8H6zM6 12h9a4 4 0 010 8H6z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round"/></svg>
-          </Btn>
-          <Btn title="Italic (Ctrl+I)" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 4h-9M14 20H5M15 4L9 20" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v7a6 6 0 0012 0V3M4 21h16" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Strikethrough" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12H4" strokeLinecap="round"/><path d="M10 8.5C10 7.1 11 6 12.5 6c.8 0 1.5.3 1.9.8" strokeLinecap="round"/><path d="M14.5 15.5c0 1.4-1.1 2.5-2.5 2.5-1 0-1.8-.5-2.2-1.3" strokeLinecap="round"/></svg>
-          </Btn>
+          <Group label="Font">
+            <Btn title="Bold (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M6 4h8a4 4 0 010 8H6zM6 12h9a4 4 0 010 8H6z"/></svg>
+            </Btn>
+            <Btn title="Italic (Ctrl+I)" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 4h-9M14 20H5M15 4L9 20" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v7a6 6 0 0012 0V3M4 21h16" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Strikethrough" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12H4" strokeLinecap="round"/><path d="M10 8.5C10 7.1 11 6 12.5 6c.8 0 1.5.3 1.9.8" strokeLinecap="round"/><path d="M14.5 15.5c0 1.4-1.1 2.5-2.5 2.5-1 0-1.8-.5-2.2-1.3" strokeLinecap="round"/></svg>
+            </Btn>
+          </Group>
 
-          {/* Text color */}
-          <div className="relative" title="Text Color">
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); colorInputRef.current?.click(); }}
-              className="flex flex-col items-center justify-center w-7 h-7 rounded hover:bg-gray-200 transition-all border border-transparent"
-            >
-              <span className="text-[13px] font-bold leading-none text-gray-800">A</span>
-              <div className="w-4 h-[3px] rounded-sm mt-0.5 bg-red-500" />
-            </button>
-            <input
-              ref={colorInputRef}
-              type="color"
-              className="absolute opacity-0 w-0 h-0 pointer-events-none"
-              defaultValue="#e63946"
-              onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-            />
-          </div>
+          <Group label="Styles">
+            {[
+              { label: 'Normal', action: () => editor.chain().focus().setParagraph().run(),                      active: editor.isActive('paragraph') && !editor.isActive('heading') },
+              { label: 'H1',     action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),         active: editor.isActive('heading', { level: 1 }) },
+              { label: 'H2',     action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),         active: editor.isActive('heading', { level: 2 }) },
+              { label: 'H3',     action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),         active: editor.isActive('heading', { level: 3 }) },
+            ].map(({ label, action, active }) => (
+              <button key={label} type="button" onMouseDown={(e) => { e.preventDefault(); action(); }}
+                className={`px-2.5 h-7 text-[11px] font-semibold rounded border transition-all ${active ? 'bg-blue-100 border-blue-400 text-blue-800' : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'}`}>
+                {label}
+              </button>
+            ))}
+          </Group>
 
-          {/* Highlight */}
-          <div className="relative" title="Highlight Color">
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); highlightInputRef.current?.click(); }}
-              className={`flex flex-col items-center justify-center w-7 h-7 rounded hover:bg-gray-200 transition-all border ${editor.isActive('highlight') ? 'border-blue-400 bg-blue-50' : 'border-transparent'}`}
-            >
-              <span className="text-[11px] font-bold leading-none" style={{ background: '#fef08a', padding: '0 2px' }}>ab</span>
-              <div className="w-4 h-[3px] rounded-sm mt-0.5 bg-yellow-400" />
-            </button>
-            <input
-              ref={highlightInputRef}
-              type="color"
-              className="absolute opacity-0 w-0 h-0 pointer-events-none"
-              defaultValue="#fef08a"
-              onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()}
-            />
-          </div>
-        </Group>
+          <Group label="Paragraph">
+            <Btn title="Align Left"  active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M15 12H3M17 18H3" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Center"      active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M17 12H7M19 18H5" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Align Right" active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H9M21 18H11" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Justify"     active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H3M21 18H3" strokeLinecap="round"/></svg>
+            </Btn>
+            <Sep />
+            <Btn title="Bullet List"   active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>
+            </Btn>
+            <Btn title="Numbered List" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 6h11M10 12h11M10 18h11" strokeLinecap="round"/><path d="M4 6v4M4 6l2-1" strokeLinecap="round"/><path d="M6 18H4l2.5-3A1.5 1.5 0 004 13" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Btn>
+          </Group>
+        </>}
 
-        {/* Styles group */}
-        <Group label="Styles">
-          {[
-            { label: 'Normal', action: () => editor.chain().focus().setParagraph().run(), active: editor.isActive('paragraph') && !editor.isActive('heading') },
-            { label: 'H1',     action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), active: editor.isActive('heading', { level: 1 }) },
-            { label: 'H2',     action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: editor.isActive('heading', { level: 2 }) },
-            { label: 'H3',     action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: editor.isActive('heading', { level: 3 }) },
-          ].map(({ label, action, active }) => (
-            <button
-              key={label}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); action(); }}
-              className={`px-2.5 h-7 text-[11px] font-semibold rounded border transition-all
-                ${active
-                  ? 'bg-blue-100 border-blue-400 text-blue-800'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                }`}
-            >
-              {label}
-            </button>
-          ))}
-        </Group>
+        {/* ── INSERT tab ── */}
+        {activeTab === 'insert' && <>
+          <Group label="Links">
+            <Btn title={editor.isActive('link') ? 'Remove Link' : 'Insert Link'} active={editor.isActive('link')} onClick={handleLink}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                {editor.isActive('link')
+                  ? <><path d="M18.84 12.25l1.72-1.71"/><path d="M5.16 11.75l-1.72 1.71"/><path d="M3.05 7.05L7 3M17 21l3.95-3.95M9 15l-5.95 5.95M14.95 3.05L21 9.1"/></>
+                  : <><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></>}
+              </svg>
+            </Btn>
+          </Group>
 
-        {/* Paragraph group */}
-        <Group label="Paragraph">
-          {/* Alignment */}
-          <Btn title="Align Left"    active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M15 12H3M17 18H3" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Center"        active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M17 12H7M19 18H5" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Align Right"   active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H9M21 18H11" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Justify"       active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H3M21 18H3" strokeLinecap="round"/></svg>
-          </Btn>
+          <Group label="Blocks">
+            <Btn title="Blockquote" active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
+              </svg>
+            </Btn>
+            <Btn title="Horizontal Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14" strokeLinecap="round"/></svg>
+            </Btn>
+          </Group>
 
-          <Sep />
+          <Group label="Code">
+            <Btn title="Inline Code" active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+            </Btn>
+            <Btn title="Code Block" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>
+              </svg>
+            </Btn>
+          </Group>
 
-          {/* Lists */}
-          <Btn title="Bullet List"   active={editor.isActive('bulletList')}   onClick={() => editor.chain().focus().toggleBulletList().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>
-          </Btn>
-          <Btn title="Numbered List" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 6h11M10 12h11M10 18h11" strokeLinecap="round"/><path d="M4 6v4M4 6l2-1" strokeLinecap="round"/><path d="M6 18H4l2.5-3A1.5 1.5 0 004 13" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Btn>
+          <Group label="Lists">
+            <Btn title="Bullet List"   active={editor.isActive('bulletList')}  onClick={() => editor.chain().focus().toggleBulletList().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>
+            </Btn>
+            <Btn title="Numbered List" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 6h11M10 12h11M10 18h11" strokeLinecap="round"/><path d="M4 6v4M4 6l2-1" strokeLinecap="round"/><path d="M6 18H4l2.5-3A1.5 1.5 0 004 13" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Btn>
+          </Group>
+        </>}
 
-          <Sep />
+        {/* ── FORMAT tab ── */}
+        {activeTab === 'format' && <>
+          <Group label="Text">
+            <Btn title="Bold"        active={editor.isActive('bold')}      onClick={() => editor.chain().focus().toggleBold().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M6 4h8a4 4 0 010 8H6zM6 12h9a4 4 0 010 8H6z"/></svg>
+            </Btn>
+            <Btn title="Italic"      active={editor.isActive('italic')}    onClick={() => editor.chain().focus().toggleItalic().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 4h-9M14 20H5M15 4L9 20" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Underline"   active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v7a6 6 0 0012 0V3M4 21h16" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Strikethrough" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 12H4" strokeLinecap="round"/><path d="M10 8.5C10 7.1 11 6 12.5 6c.8 0 1.5.3 1.9.8" strokeLinecap="round"/></svg>
+            </Btn>
+          </Group>
 
-          {/* Indent / Outdent */}
-          <Btn title="Increase Indent" disabled={!can.sinkListItem('listItem')} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h18M3 16h18M9 12h9" strokeLinecap="round"/><path d="M3 12l3 3-3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Btn>
-          <Btn title="Decrease Indent" disabled={!can.liftListItem('listItem')} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h18M3 16h18M9 12h9" strokeLinecap="round"/><path d="M9 12l-3 3 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Btn>
-        </Group>
+          <Group label="Color">
+            <div className="relative" title="Text Color">
+              <button type="button" onMouseDown={(e) => { e.preventDefault(); colorInputRef.current?.click(); }}
+                className="flex flex-col items-center justify-center w-7 h-7 rounded hover:bg-gray-200 transition-all border border-transparent">
+                <span className="text-[13px] font-bold leading-none text-gray-800">A</span>
+                <div className="w-4 h-[3px] rounded-sm mt-0.5 bg-red-500" />
+              </button>
+              <input ref={colorInputRef} type="color" className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                defaultValue="#e63946" onChange={(e) => editor.chain().focus().setColor(e.target.value).run()} />
+            </div>
+            <div className="relative" title="Highlight Color">
+              <button type="button" onMouseDown={(e) => { e.preventDefault(); highlightInputRef.current?.click(); }}
+                className={`flex flex-col items-center justify-center w-7 h-7 rounded hover:bg-gray-200 transition-all border ${editor.isActive('highlight') ? 'border-blue-400 bg-blue-50' : 'border-transparent'}`}>
+                <span className="text-[11px] font-bold leading-none" style={{ background: '#fef08a', padding: '0 2px' }}>ab</span>
+                <div className="w-4 h-[3px] rounded-sm mt-0.5 bg-yellow-400" />
+              </button>
+              <input ref={highlightInputRef} type="color" className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                defaultValue="#fef08a" onChange={(e) => editor.chain().focus().toggleHighlight({ color: e.target.value }).run()} />
+            </div>
+          </Group>
 
-        {/* Insert group */}
-        <Group label="Insert">
-          <Btn title={editor.isActive('link') ? 'Remove Link' : 'Insert Link'} active={editor.isActive('link')} onClick={handleLink}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              {editor.isActive('link')
-                ? <><path d="M18.84 12.25l1.72-1.71"/><path d="M5.16 11.75l-1.72 1.71"/><path d="M3.05 7.05L7 3M17 21l3.95-3.95M9 15l-5.95 5.95M14.95 3.05L21 9.1"/></>
-                : <><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></>
-              }
-            </svg>
-          </Btn>
-          <Btn title="Blockquote" active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zm12 0c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
-            </svg>
-          </Btn>
-          <Btn title="Horizontal Rule" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14" strokeLinecap="round"/></svg>
-          </Btn>
-          <Btn title="Clear Formatting" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M6 6l12 12M6 12h9.5"/><path d="M14 6H5l4 6"/>
-            </svg>
-          </Btn>
-        </Group>
+          <Group label="Alignment">
+            <Btn title="Align Left"  active={editor.isActive({ textAlign: 'left' })}    onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M15 12H3M17 18H3" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Center"      active={editor.isActive({ textAlign: 'center' })}  onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M17 12H7M19 18H5" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Align Right" active={editor.isActive({ textAlign: 'right' })}   onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H9M21 18H11" strokeLinecap="round"/></svg>
+            </Btn>
+            <Btn title="Justify"     active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 6H3M21 12H3M21 18H3" strokeLinecap="round"/></svg>
+            </Btn>
+          </Group>
+
+          <Group label="Indent">
+            <Btn title="Increase Indent" disabled={!can.sinkListItem('listItem')} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h18M3 16h18M9 12h9" strokeLinecap="round"/><path d="M3 12l3 3-3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Btn>
+            <Btn title="Decrease Indent" disabled={!can.liftListItem('listItem')} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h18M3 16h18M9 12h9" strokeLinecap="round"/><path d="M9 12l-3 3 3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Btn>
+          </Group>
+
+          <Group label="Clear">
+            <Btn title="Clear Formatting" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M6 6l12 12M6 12h9.5"/><path d="M14 6H5l4 6"/>
+              </svg>
+            </Btn>
+          </Group>
+        </>}
       </div>
 
       {/* ── Editor area (Word-like white page) ── */}

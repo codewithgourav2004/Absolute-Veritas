@@ -25,29 +25,16 @@ const Hero = () => (
         </p>
         <div className="flex flex-wrap gap-4">
           <Link to="/contact-us" className="btn-primary text-base px-8 py-4">
-            Get Free Consultation
+            Get Free Consultation →
           </Link>
           <Link to="/services" className="btn-outline text-base px-8 py-4">
             Explore Services
           </Link>
         </div>
 
-        <div className="flex gap-12 mt-14">
-          {[
-            { value: '1600+', label: 'Happy Clients' },
-            { value: '1100+', label: 'Projects Done' },
-            { value: '15+',   label: 'Years Experience' },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <div className="font-display text-3xl font-black text-gold">{stat.value}</div>
-              <div className="text-gray-400 text-sm mt-1">{stat.label}</div>
-            </div>
-          ))}
-        </div>
+        <TickerTape />
       </div>
     </div>
-
-    <TickerTape />
   </section>
 );
 

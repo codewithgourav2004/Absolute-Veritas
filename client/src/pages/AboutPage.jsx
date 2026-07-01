@@ -1,7 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import SectionHeader from '../components/Common/SectionHeader';
+
+// Inject glow keyframes once
+let glowStyleInjected = false;
+function injectGlowStyles() {
+  if (glowStyleInjected) return;
+  const tag = document.createElement('style');
+  tag.textContent = `
+    @keyframes milestoneGlow {
+      0%,100% { box-shadow: 0 0 18px 2px rgba(230,57,70,0.35), 0 0 40px 6px rgba(230,57,70,0.15); }
+      50%      { box-shadow: 0 0 28px 6px rgba(230,57,70,0.55), 0 0 60px 12px rgba(230,57,70,0.25); }
+    }
+    @keyframes dotGlowPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.5), 0 0 14px 4px rgba(230,57,70,0.3); }
+      50%      { box-shadow: 0 0 0 10px rgba(230,57,70,0), 0 0 22px 8px rgba(230,57,70,0.5); }
+    }
+    @keyframes lineGrow {
+      from { transform: scaleY(0); opacity:0; }
+      to   { transform: scaleY(1); opacity:1; }
+    }
+  `;
+  document.head.appendChild(tag);
+  glowStyleInjected = true;
+}
 
 const stats = [
   { value: '15+',   label: 'Years of Experience', icon: '🏆', color: 'from-indigo to-[#2d3566]' },
@@ -46,7 +69,10 @@ const values = [
   { icon: '🌐', title: 'Global Network',         desc: 'Accredited labs across India and key international markets.' },
 ];
 
-const AboutPage = () => (
+const AboutPage = () => {
+  const [activeIdx, setActiveIdx] = useState(null);
+  useEffect(() => { injectGlowStyles(); }, []);
+  return (
   <>
     <Helmet>
       <title>About Us | Absolute Veritas</title>
@@ -255,47 +281,80 @@ const AboutPage = () => (
 
             <div className="space-y-10">
               {milestones.map((m, i) => {
-                const isLeft = i % 2 === 0;
+                const isLeft  = i % 2 === 0;
+                const isActive = activeIdx === i;
+
+                const cardBase = `rounded-2xl p-6 cursor-pointer select-none transition-all duration-300 border`;
+                const cardActive = `bg-white border-crimson scale-[1.03]`;
+                const cardIdle  = `bg-pearl border-gray-100 hover:shadow-lg hover:border-crimson/20`;
+
                 return (
                   <div key={m.year} className="relative flex flex-col md:flex-row items-center gap-4 md:gap-0">
 
-                    {/* Left card (even) / empty space (odd) */}
+                    {/* Left card */}
                     <div className={`w-full md:w-[45%] ${isLeft ? 'md:pr-10' : 'md:order-3'}`}>
-                      {isLeft ? (
-                        <div className="bg-pearl border border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:border-crimson/20 transition-all duration-300 group md:text-right">
-                          <div className={`flex items-center gap-3 mb-3 ${isLeft ? 'md:flex-row-reverse' : ''}`}>
-                            <span className="text-2xl">{m.icon}</span>
-                            <h3 className="font-display font-bold text-indigo text-base group-hover:text-crimson transition-colors">{m.title}</h3>
+                      {isLeft && (
+                        <div
+                          onClick={() => setActiveIdx(isActive ? null : i)}
+                          className={`${cardBase} ${isActive ? cardActive : cardIdle} md:text-right`}
+                          style={isActive ? { animation: 'milestoneGlow 1.8s ease-in-out infinite' } : {}}
+                        >
+                          <div className={`flex items-center gap-3 mb-3 md:flex-row-reverse`}>
+                            <span className={`text-2xl transition-transform duration-300 ${isActive ? 'scale-125' : ''}`}>{m.icon}</span>
+                            <h3 className={`font-display font-bold text-base transition-colors duration-200 ${isActive ? 'text-crimson' : 'text-indigo'}`}>{m.title}</h3>
                           </div>
                           <p className="text-gray-500 text-sm leading-relaxed">{m.event}</p>
+                          {isActive && (
+                            <span className="inline-flex items-center gap-1 mt-3 text-[10px] font-mono font-bold text-crimson/60 uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-crimson animate-pulse" /> Active Milestone
+                            </span>
+                          )}
                         </div>
-                      ) : null}
+                      )}
                     </div>
 
                     {/* Center dot + year */}
                     <div className="md:w-[10%] flex flex-col items-center z-10 order-first md:order-2">
-                      <div className="w-12 h-12 rounded-full bg-indigo flex items-center justify-center shadow-lg border-4 border-white ring-2 ring-crimson/30">
-                        <span className="text-lg">{m.icon}</span>
+                      <div
+                        onClick={() => setActiveIdx(isActive ? null : i)}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-white cursor-pointer transition-all duration-300 ${isActive ? 'bg-crimson ring-4 ring-crimson/40 scale-110' : 'bg-indigo ring-2 ring-crimson/30 hover:scale-105'}`}
+                        style={isActive ? { animation: 'dotGlowPulse 1.8s ease-in-out infinite' } : {}}
+                      >
+                        <span className={`transition-all duration-300 ${isActive ? 'text-xl' : 'text-lg'}`}>{m.icon}</span>
                       </div>
-                      <span className="mt-2 text-xs font-black text-crimson tracking-wider font-mono">{m.year}</span>
+                      <span className={`mt-2 text-xs font-black tracking-wider font-mono transition-all duration-200 ${isActive ? 'text-crimson scale-110' : 'text-crimson/70'}`}>{m.year}</span>
                     </div>
 
-                    {/* Right card (odd) / empty space (even) */}
+                    {/* Right card */}
                     <div className={`w-full md:w-[45%] ${!isLeft ? 'md:pl-10' : 'md:order-3'}`}>
-                      {!isLeft ? (
-                        <div className="bg-pearl border border-gray-100 rounded-2xl p-6 hover:shadow-lg hover:border-crimson/20 transition-all duration-300 group">
+                      {!isLeft && (
+                        <div
+                          onClick={() => setActiveIdx(isActive ? null : i)}
+                          className={`${cardBase} ${isActive ? cardActive : cardIdle}`}
+                          style={isActive ? { animation: 'milestoneGlow 1.8s ease-in-out infinite' } : {}}
+                        >
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="text-2xl">{m.icon}</span>
-                            <h3 className="font-display font-bold text-indigo text-base group-hover:text-crimson transition-colors">{m.title}</h3>
+                            <span className={`text-2xl transition-transform duration-300 ${isActive ? 'scale-125' : ''}`}>{m.icon}</span>
+                            <h3 className={`font-display font-bold text-base transition-colors duration-200 ${isActive ? 'text-crimson' : 'text-indigo'}`}>{m.title}</h3>
                           </div>
                           <p className="text-gray-500 text-sm leading-relaxed">{m.event}</p>
+                          {isActive && (
+                            <span className="inline-flex items-center gap-1 mt-3 text-[10px] font-mono font-bold text-crimson/60 uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-crimson animate-pulse" /> Active Milestone
+                            </span>
+                          )}
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Hint text */}
+            <p className="text-center text-gray-400 text-xs font-mono mt-8 tracking-wide">
+              ✦ Click any milestone to highlight it
+            </p>
           </div>
         </div>
       </section>
@@ -425,6 +484,7 @@ const AboutPage = () => (
 
     </div>
   </>
-);
+  );
+};
 
 export default AboutPage;

@@ -87,13 +87,13 @@ const ServicesSection = () => {
                   className={`relative flex flex-col items-start p-4 rounded-2xl border text-left transition-all duration-250 group overflow-hidden ${
                     isActive
                       ? 'border-crimson/40 bg-crimson/10 shadow-lg shadow-crimson/15 scale-[1.02]'
-                      : 'border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 hover:scale-[1.01]'
+                      : 'border-white/[0.08] bg-white/[0.03] hover:bg-crimson/[0.07] hover:border-crimson/30 hover:scale-[1.01] hover:shadow-lg hover:shadow-crimson/10'
                   }`}
                 >
                   {/* Background glow */}
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl"
-                    style={{ background: `radial-gradient(circle at 30% 30%, ${meta.color}18 0%, transparent 70%)` }}
+                    style={{ background: `radial-gradient(circle at 30% 30%, #E6394618 0%, transparent 70%)` }}
                   />
                   {isActive && (
                     <div
@@ -113,7 +113,7 @@ const ServicesSection = () => {
                   <p className={`relative font-semibold text-[13px] leading-snug mb-1 transition-colors ${isActive ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
                     {cat}
                   </p>
-                  <p className="relative text-[10px] text-gray-600 leading-relaxed line-clamp-2 flex-grow">
+                  <p className="relative text-[10px] text-gray-600 group-hover:text-gray-400 leading-relaxed line-clamp-2 flex-grow transition-colors">
                     {meta.tagline}
                   </p>
 

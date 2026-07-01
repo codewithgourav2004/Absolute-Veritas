@@ -51,7 +51,7 @@ The React client communicates exclusively through the Axios instance at `client/
 
 Public endpoints: `GET /api/services`, `GET /api/blogs`, `GET /api/stats`, `GET /api/testimonials`, `POST /api/enquiries`, `POST /api/auth/login`, `GET /api/health`, `GET /api/news`, `GET /api/news/:slug`, `GET /api/newsletters`, `GET /api/newsletters/:id`, `GET /api/download?url=<encoded>` (server-side PDF proxy — force-downloads external URLs; add `&inline=1` to serve inline for react-pdf), `POST /api/subscribers/subscribe`, `GET /api/subscribers/unsubscribe/:token`.
 
-Private (JWT required): all POST/PUT/DELETE on services, blogs, testimonials, stats, news, newsletters; `GET /api/enquiries`; `GET /api/news/admin-all` (returns all news including unpublished); `POST /api/upload` (image upload — stores in `server/uploads/`, returns `{ url: '/uploads/<filename>' }`); `GET /api/subscribers`, `PUT /api/subscribers/:id`, `DELETE /api/subscribers/:id`, `POST /api/subscribers/send/:newsletterId`.
+Private (JWT required): all POST/PUT/DELETE on services, blogs, testimonials, stats, news, newsletters; `GET /api/enquiries`; `GET /api/news/admin-all` (returns all news including unpublished); `GET /api/newsletters/admin-all` (returns all newsletters including drafts); `GET /api/newsletters/admin/:id` (full newsletter with content); `POST /api/upload` (image upload — stores in `server/uploads/`, returns `{ url: '/uploads/<filename>' }`); `GET /api/subscribers`, `PUT /api/subscribers/:id`, `DELETE /api/subscribers/:id`, `POST /api/subscribers/send/:newsletterId`.
 
 Public read-only API responses carry `Cache-Control`: services/blogs → 5 min, testimonials/stats → 10 min. The `cachePublic` middleware checks `req.headers.authorization` — **authenticated (admin) requests always get `Cache-Control: no-store`** even on GET routes, preventing stale images/data after admin saves.
 
@@ -63,7 +63,11 @@ Blog list endpoint (`GET /api/blogs`) returns `{ blogs, total, pages, page }` wi
 
 News list endpoint (`GET /api/news`) mirrors blogs: returns `{ news, total, pages, page }` with `content` excluded; `content` only on `GET /api/news/:slug`. Supports `?category=`, `?isTrending=true`, `?page=`, `?limit=` query params. Only `isPublished: true` articles are returned. Admin uses `GET /api/news/admin-all` (JWT required) to fetch all including drafts. Slugs are auto-generated from title.
 
-Newsletter endpoint (`GET /api/newsletters`) returns a flat array of **all** newsletters (published and draft — there is no separate admin endpoint) sorted by year desc then month desc. Fields include `title`, `edition`, `month`, `year`, `excerpt`, `content`, `coverImage`, `pdfLink`, `isPublished`. Individual newsletter fetched by `GET /api/newsletters/:id`. The `Subscriber` model stores email newsletter subscribers; `POST /api/subscribers/send/:newsletterId` sends the newsletter email to all active subscribers via Nodemailer.
+Newsletter endpoint (`GET /api/newsletters`) returns only **published** newsletters sorted by year desc then month desc, with `content` excluded. Individual newsletter fetched by `GET /api/newsletters/:id`. Admin uses `GET /api/newsletters/admin-all` to fetch all including drafts (with content). The `Subscriber` model stores email newsletter subscribers; `POST /api/subscribers/send/:newsletterId` sends the newsletter email to all active subscribers via Nodemailer.
+
+### Scheduled publishing
+
+`server/scheduler.js` runs a `setInterval` every 60 seconds after the DB connects. It finds any `News` or `Newsletter` document where `isPublished: false AND scheduledAt <= now`, sets `isPublished: true`, clears `scheduledAt`, and saves. For newsletters it also triggers `broadcastNewsletter` on first publish (same as the manual publish flow). Both models carry a `scheduledAt: Date` field (default `null`).
 
 ### Frontend structure
 
@@ -100,7 +104,7 @@ All pages are code-split via `React.lazy()` in `client/src/App.js`.
 - `AdminServicesPage.jsx` — CRUD for services (name, category, subcategory fields, description, icon, image, **content** body, features list, display order, isActive toggle). Has drag-to-reorder rows. The content field has two modes: **plain text** (auto-converted via `toHtml()`) and **HTML/JS/CSS mode** (stored as-is). HTML/JS/CSS mode shows a `▶ Preview` button that renders a live sandboxed iframe preview below the textarea. Fetches all services including inactive via `?includeInactive=true`.
 - `AdminEnquiriesPage.jsx` — lists all enquiries, filterable by status. Click a row to expand, change status, or open a mailto link.
 - `AdminNewsPage.jsx` — CRUD for news articles with `isTrending`/`isPublished` toggles, category, tags, cover image. Includes a **quick Trending toggle** button per row that PUTs only `{ isTrending }` without opening the edit form. Fetches from `/api/news/admin-all`.
-- `AdminNewsletterPage.jsx` — **tabbed**: "Newsletters" tab manages newsletter editions (title, edition, month, year, excerpt, content, coverImage, pdfLink); "News Articles" tab is a full CRUD for news articles (same fields as AdminNewsPage, including quick Trending toggle); "Subscribers" tab lists all email subscribers with active/inactive toggle and delete. The active tab is controlled by `?tab=newsletters`, `?tab=news`, or `?tab=subscribers` URL query param. Fetches newsletters from `/api/newsletters` and news from `/api/news/admin-all`.
+- `AdminNewsletterPage.jsx` — **tabbed**: "Newsletters" tab manages newsletter editions (title, edition, month, year, excerpt, content, coverImage, pdfLink); "News Articles" tab is a full CRUD for news articles (same fields as AdminNewsPage, including quick Trending toggle); "Subscribers" tab lists all email subscribers with active/inactive toggle and delete. The active tab is controlled by `?tab=newsletters`, `?tab=news`, or `?tab=subscribers` URL query param. Both the Newsletter and News Article forms use a **3-way publish mode picker** instead of a simple toggle: "Save as Draft" (`isPublished: false, scheduledAt: null`), "Schedule" (`isPublished: false, scheduledAt: <datetime>`), or "Publish Now" (`isPublished: true`). List rows show a blue "⏰ date/time" badge for scheduled items.
 - `AdminEmailPage.jsx` — compose and send custom emails to subscribers. Supports subject, plain-text or HTML body (toggle), file attachments (drag-and-drop, ≤10 MB, ≤5 files), per-subscriber selection with search filter, and a confirmation dialog before sending. POSTs to `/api/subscribers/send-email` (multipart/form-data).
 - `NewsletterPage.jsx` — grid of newsletter cards. Clicking a card with `pdfLink` opens `FlipbookViewer` directly (via `preventDefault` on the Link + `onOpenFlipbook` callback) — does **not** navigate to detail page. Cards without PDF navigate to `/newsletter/:id`. Includes a `SubscribeSection` at the bottom (POSTs to `/api/subscribers/subscribe`).
 - `NewsletterDetail.jsx` — auto-opens `FlipbookViewer` via `useEffect` when `newsletter.pdfLink` exists. Has a "Re-open Flipbook" button shown only when flipbook is closed. The inline PDF iframe viewer has been removed — `FlipbookViewer` is the only PDF viewer.
@@ -124,8 +128,12 @@ All admin pages share `client/src/components/Admin/AdminLayout.jsx`. The sidebar
 All category panel components live in `client/src/components/Services/`. Each receives an `onEnquire(serviceObject)` prop.
 
 **API-backed panels** (fetch from `/api/services?category=...`, dark bg):
-- `ServiceGroupPanel` — used for Certification, Testing, Inspection, IT Compliance tabs. Groups services by `subcategory` field. Left sidebar lists groups; right panel shows a grid of service cards. **Clicking a service card opens an inline detail view** (replaces the grid within the same panel) showing icon, name, description, full features list with checkmarks. Detail view has a back button, "Enquire Now" button, and "View Full Page" link to `/services/:slug`. Resets to grid when switching sidebar groups.
-- `ServiceCategoryPanel` — used for the Others tab; renders a flat grid of `ServiceCard` components.
+- `ServiceGroupPanel` — used for Certification, Testing, Inspection, IT Compliance tabs. Groups services by `subcategory` field. Left sidebar lists groups with service counts; right panel shows a grid of service cards. **Clicking a service card opens an inline detail view** (`ServiceItemDetail`) replacing the grid within the same panel — shows icon, name, description, full features list, "Enquire Now" and "View Full Page" actions. Resets to grid when switching sidebar groups.
+- `ServiceCategoryPanel` — used for the Others tab. Same sidebar+detail layout as `ServiceGroupPanel` but without subcategory grouping: left sidebar lists services directly; right panel shows the active service's description and a 2-column features grid.
+
+`ServiceCard` — a light-themed card used only in the "All" tab grid on `ServicesPage`. Not used inside the dark panels.
+
+`ServicesSection` (homepage) uses `ServiceGroupPanel` and `ServiceCategoryPanel` directly. It renders five **click-to-expand category cards** (one per `SERVICE_CATEGORIES` entry) with colour-coded icons, a tagline, and a stat pill. Clicking a card toggles an animated panel open below the grid. The legacy hardcoded panels (`CertificationsPanel`, `TestingPanel`, `InspectionPanel`) still exist in the file tree but are no longer imported by `ServicesSection`.
 
 The `isDark` flag in `ServicesPage` is derived as `PANEL_TABS.has(activeCategory)` where `PANEL_TABS = new Set(['Certification', 'Testing', 'Inspection', 'IT Compliance', 'Others'])`. It drives both the background colour and the tab pill style. Update `PANEL_TABS` whenever a new tab with a dark panel is added.
 
@@ -207,6 +215,7 @@ All three admin forms (Blog, News, Newsletter) use `object-contain` for the cove
 - The `api.js` response interceptor redirects to `/admin/login` on any `401` **except** `/auth/login` itself.
 - `GET /api/services` filters `isActive: true` by default; pass `?includeInactive=true` to get all (used by admin).
 - Quick-toggle mutations (isTrending, isActive) PUT only the changed field — the controllers use `findByIdAndUpdate` which does a `$set`, so partial payloads are safe.
+- `NewsletterController.updateNewsletter` auto-broadcasts to subscribers only on **first publish** (checks `wasUnpublished && willPublish && !existing.emailedAt`). The scheduler mirrors this logic when publishing scheduled items.
 
 ### Contact details (hardcoded in components)
 - **Registered address**: 31A, Molar Band Extension, South Delhi – 110044
