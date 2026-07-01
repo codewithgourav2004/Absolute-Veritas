@@ -225,8 +225,8 @@ enquiryController.submitEnquiry()
       │         └─ saves with status: 'new'
       │
       ├─► Nodemailer: Admin notification email
-      │         From:    EMAIL_FROM (gk154139@gmail.com)
-      │         To:      EMAIL_TO   (gk154139@gmail.com)
+      │         From:    EMAIL_FROM (cs14@absoluteveritas.com)
+      │         To:      EMAIL_TO   (cs14@absoluteveritas.com)
       │         Subject: "New Enquiry from <name> — <category>"
       │         Body:    Branded HTML with all enquiry details
       │         Logs:    ✅ Admin notification sent  /  ❌ failed
@@ -430,10 +430,10 @@ Copy `server/.env.example` → `server/.env` and fill in:
 | `CLIENT_URL` | ✅ | `http://localhost:3000` |
 | `EMAIL_HOST` | ✅ | `smtp.gmail.com` |
 | `EMAIL_PORT` | ✅ | `587` |
-| `EMAIL_USER` | ✅ | `gk154139@gmail.com` |
+| `EMAIL_USER` | ✅ | `cs14@absoluteveritas.com` |
 | `EMAIL_PASS` | ✅ | 16-char Gmail App Password |
-| `EMAIL_FROM` | ✅ | `gk154139@gmail.com` |
-| `EMAIL_TO` | ✅ | `gk154139@gmail.com` (admin inbox) |
+| `EMAIL_FROM` | ✅ | `cs14@absoluteveritas.com` |
+| `EMAIL_TO` | ✅ | `cs14@absoluteveritas.com` (admin inbox) |
 
 > **Email note:** `EMAIL_PASS` must be a Gmail **App Password** (not your regular password).  
 > Generate at: myaccount.google.com → Security → App Passwords
